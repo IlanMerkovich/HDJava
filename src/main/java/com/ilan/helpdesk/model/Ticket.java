@@ -50,7 +50,6 @@ public class Ticket {
         this.description = description;
         this.status = status;
         this.priority = priority;
-
     }
 
     public Long getId() {

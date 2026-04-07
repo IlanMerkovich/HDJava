@@ -2,6 +2,7 @@ package com.ilan.helpdesk.service;
 
 import com.ilan.helpdesk.dto.*;
 import com.ilan.helpdesk.enums.Role;
+import com.ilan.helpdesk.enums.TicketHistoryActionType;
 import com.ilan.helpdesk.enums.TicketPriority;
 import com.ilan.helpdesk.enums.TicketStatus;
 import com.ilan.helpdesk.exception.InvalidTicketStateException;
@@ -9,12 +10,15 @@ import com.ilan.helpdesk.exception.InvalidUserRoleException;
 import com.ilan.helpdesk.exception.ResourceNotFoundException;
 import com.ilan.helpdesk.model.Comment;
 import com.ilan.helpdesk.model.Ticket;
+import com.ilan.helpdesk.model.TicketHistory;
 import com.ilan.helpdesk.model.User;
 import com.ilan.helpdesk.repository.CommentRepository;
+import com.ilan.helpdesk.repository.TicketHistoryRepository;
 import com.ilan.helpdesk.repository.TicketRepository;
 import com.ilan.helpdesk.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,22 +30,36 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private final TicketHistoryRepository ticketHistoryRepository;
 
-    public TicketResponse assignTicket(long tickedId, assignTicketRequest request){
-        Ticket ticket=findTicketEntityById(tickedId);
-        User agent=userRepository.findById(request.getAgentId()).orElseThrow(()->new ResourceNotFoundException("agent with id "+request.getAgentId()+" not found"));
+    public TicketResponse assignTicket(long ticketId, assignTicketRequest request, Authentication authentication) {
+        Ticket ticket = findTicketEntityById(ticketId);
+        User changedBy = getCurrentUser(authentication);
+        User agent = userRepository.findById(request.getAgentId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "agent with id " + request.getAgentId() + " not found"
+                ));
 
-        if (agent.getRole()!=Role.AGENT){
+        if (agent.getRole() != Role.AGENT) {
             throw new InvalidUserRoleException("cant assign ticket to a non-agent user");
         }
+        String oldAssignedToEmail;
+        if (ticket.getAssignedTo() != null) {
+            oldAssignedToEmail = ticket.getAssignedTo().getEmail();
+        } else {
+            oldAssignedToEmail = null;
+        }
         ticket.setAssignedTo(agent);
-        Ticket updatedTicket=ticketRepository.save(ticket);
+        Ticket updatedTicket = ticketRepository.save(ticket);
+        createAssignmentHistory(updatedTicket, oldAssignedToEmail, agent.getEmail(), changedBy);
+
         return mapTicketToResponse(updatedTicket);
     }
-    public TicketService(TicketRepository ticketRepository, CommentRepository commentRepository,UserRepository userRepository) {
+    public TicketService(TicketRepository ticketRepository, CommentRepository commentRepository, UserRepository userRepository, TicketHistoryRepository ticketHistoryRepository) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.userRepository=userRepository;
+        this.ticketHistoryRepository=ticketHistoryRepository;
     }
     public List<TicketResponse> getAllTickets(TicketStatus status, TicketPriority priority, Authentication authentication) {
         String email = authentication.getName();
@@ -118,6 +136,7 @@ public class TicketService {
         User user=getCurrentUser(authentication);
         validateTicketAccess(user,ticket);
 
+        TicketStatus oldStatus = ticket.getStatus();
         TicketStatus newStatus = request.getStatus();
 
         if (ticket.getStatus() == TicketStatus.CLOSED) {
@@ -130,6 +149,8 @@ public class TicketService {
 
         ticket.setStatus(newStatus);
         Ticket updatedTicket = ticketRepository.save(ticket);
+
+        createStatusHistory(updatedTicket,oldStatus,newStatus,user);
 
         return mapTicketToResponse(updatedTicket);
     }
@@ -219,5 +240,57 @@ public class TicketService {
         if (!canAccessTicket(user,ticket)){
             throw new ResourceNotFoundException("Ticket with id "+ticket.getId()+" not found");
         }
+    }
+    private void createStatusHistory(Ticket ticket, TicketStatus oldStatus, TicketStatus newStatus, User changedBy) {
+        TicketHistory history = new TicketHistory();
+        history.setTicket(ticket);
+        history.setActionType(TicketHistoryActionType.STATUS_CHANGED);
+        history.setOldStatus(oldStatus);
+        history.setNewStatus(newStatus);
+        history.setChangedBy(changedBy);
+        history.setChangedAt(LocalDateTime.now());
+
+        ticketHistoryRepository.save(history);
+    }
+    private void createAssignmentHistory(Ticket ticket, String oldAssignedToEmail, String newAssignedToEmail, User changedBy) {
+        TicketHistory history = new TicketHistory();
+        history.setTicket(ticket);
+        history.setActionType(TicketHistoryActionType.ASSIGNED);
+        history.setOldAssignedToEmail(oldAssignedToEmail);
+        history.setNewAssignedToEmail(newAssignedToEmail);
+        history.setChangedBy(changedBy);
+        history.setChangedAt(LocalDateTime.now());
+
+        ticketHistoryRepository.save(history);
+    }
+    public List<ticketHistoryResponse> getTicketHistory(long ticketId,Authentication authentication){
+        Ticket ticket=findTicketEntityById(ticketId);
+        User user=getCurrentUser(authentication);
+        validateTicketAccess(user,ticket);
+
+        List<TicketHistory> historyList= ticketHistoryRepository.findByTicketIdOrderByChangedAtAsc(ticketId);
+        List<ticketHistoryResponse> responses=new ArrayList<>();
+
+        for (TicketHistory ticketHistory:historyList){
+            responses.add(mapHistoryToResponse(ticketHistory));
+        }
+        return responses;
+    }
+    private ticketHistoryResponse mapHistoryToResponse(TicketHistory history) {
+        ticketHistoryResponse response = new ticketHistoryResponse();
+        response.setId(history.getId());
+        response.setActionType(history.getActionType());
+        response.setOldStatus(history.getOldStatus());
+        response.setNewStatus(history.getNewStatus());
+        response.setOldAssignedToEmail(history.getOldAssignedToEmail());
+        response.setNewAssignedToEmail(history.getNewAssignedToEmail());
+        response.setChangedAt(history.getChangedAt());
+
+        if (history.getChangedBy() != null) {
+            response.setChangedByEmail(history.getChangedBy().getEmail());
+            response.setChangedByFullName(history.getChangedBy().getFullName());
+        }
+
+        return response;
     }
 }

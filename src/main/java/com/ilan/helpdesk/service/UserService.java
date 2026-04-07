@@ -29,7 +29,6 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
-
     public userResponse register(registerRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException("Email already exists");
@@ -51,7 +50,6 @@ public class UserService {
 
         return response;
     }
-
     public authResponse login(loginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
@@ -73,7 +71,6 @@ public class UserService {
 
         return response;
     }
-
     public currentUserResponse getCurrentUser(Authentication authentication){
         String email=authentication.getName();
         User user=userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
@@ -83,7 +80,6 @@ public class UserService {
 
         return response;
     }
-
     public userResponse mapToUserResponse(User user){
         userResponse response=new userResponse();
 
@@ -94,7 +90,6 @@ public class UserService {
         return response;
 
     }
-
     public List<userResponse> getAllUsers(){
         List<User>users=userRepository.findAll();
         List<userResponse>userResponses=new ArrayList<>();

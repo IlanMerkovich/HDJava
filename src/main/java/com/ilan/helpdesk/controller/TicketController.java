@@ -31,6 +31,12 @@ public class TicketController{
         return ticketService.getAllTickets(status,priority,authentication);
     }
 
+    @GetMapping("/{id}/history")
+    @PreAuthorize("hasAnyRole('CLIENT','AGENT','ADMIN')")
+    public List<ticketHistoryResponse> getTicketHistory(@PathVariable long id,Authentication authentication){
+        return ticketService.getTicketHistory(id,authentication);
+    }
+
     @GetMapping("/{id}") //returns ticket by id ==> which means when we get /api/ticket/1 , it will return the ticket. PathVariable means take the id form url
     //for example /api/ticket/999 --> id=999//
     @PreAuthorize("hasAnyRole('CLIENT','AGENT','ADMIN')")
@@ -66,8 +72,8 @@ public class TicketController{
 
     @PatchMapping("/{id}/assign")
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public TicketResponse assignTicket(@PathVariable long id,@Valid @RequestBody assignTicketRequest request){
-        return ticketService.assignTicket(id,request);
+    public TicketResponse assignTicket(@PathVariable long id,@Valid @RequestBody assignTicketRequest request,Authentication authentication){
+        return ticketService.assignTicket(id,request,authentication);
     }
 
 
