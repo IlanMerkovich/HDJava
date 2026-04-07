@@ -7,6 +7,7 @@ public class userResponse {
     private String email;
     private Role role;
     private long id;
+
     public userResponse(){};
     public userResponse(String fullName,String email,Role role,long id){
         this.email=email;

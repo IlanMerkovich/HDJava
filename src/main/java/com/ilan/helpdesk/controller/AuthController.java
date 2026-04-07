@@ -6,6 +6,9 @@ import com.ilan.helpdesk.dto.userResponse;
 import com.ilan.helpdesk.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import com.ilan.helpdesk.dto.currentUserResponse;
+import com.ilan.helpdesk.exception.ResourceNotFoundException;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,4 +29,11 @@ public class AuthController {
     public authResponse login(@Valid @RequestBody loginRequest request) {
         return userService.login(request);
     }
+
+    @GetMapping("/me")
+    public currentUserResponse me(Authentication authentication){
+        return userService.getCurrentUser(authentication);
+    }
+
+
 }
