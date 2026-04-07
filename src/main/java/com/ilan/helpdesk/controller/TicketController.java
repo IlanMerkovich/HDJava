@@ -34,14 +34,14 @@ public class TicketController{
     @GetMapping("/{id}") //returns ticket by id ==> which means when we get /api/ticket/1 , it will return the ticket. PathVariable means take the id form url
     //for example /api/ticket/999 --> id=999//
     @PreAuthorize("hasAnyRole('CLIENT','AGENT','ADMIN')")
-    public TicketResponse getTicketById(@PathVariable long id){
-        return ticketService.getTicketById(id);
+    public TicketResponse getTicketById(@PathVariable long id,Authentication authentication){
+        return ticketService.getTicketById(id,authentication);
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
-    public TicketResponse updateTicketStatus(@PathVariable long id, @Valid @RequestBody UpdateTicketStatusRequest request){
-        return ticketService.updateTicketStatus(id,request);
+    public TicketResponse updateTicketStatus(@PathVariable long id, @Valid @RequestBody UpdateTicketStatusRequest request,Authentication authentication){
+        return ticketService.updateTicketStatus(id,request,authentication);
     }
 
     @PostMapping //creating a new ticket
@@ -53,8 +53,8 @@ public class TicketController{
     }
     @GetMapping("/{id}/comments")
     @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
-    public List<CommentResponse> getCommentsByTicketId(@PathVariable long id){
-        return ticketService.getCommentsByTicketId(id);
+    public List<CommentResponse> getCommentsByTicketId(@PathVariable long id,Authentication authentication){
+        return ticketService.getCommentsByTicketId(id,authentication);
     }
 
     @PostMapping("/{id}/comments")

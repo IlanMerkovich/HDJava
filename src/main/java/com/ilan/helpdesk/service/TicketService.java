@@ -61,7 +61,19 @@ public class TicketService {
             } else {
                 tickets = ticketRepository.findByCreatedBy(currentUser);
             }
-        } else {
+        }
+        else if (currentUser.getRole() == Role.AGENT) {
+            if (status != null && priority != null) {
+                tickets = ticketRepository.findByAssignedToAndStatusAndPriority(currentUser, status, priority);
+            } else if (status != null) {
+                tickets = ticketRepository.findByAssignedToAndStatus(currentUser, status);
+            } else if (priority != null) {
+                tickets = ticketRepository.findByAssignedToAndPriority(currentUser, priority);
+            } else {
+                tickets = ticketRepository.findByAssignedTo(currentUser);
+            }
+        }
+        else {
             if (status != null && priority != null) {
                 tickets = ticketRepository.findByStatusAndPriority(status, priority);
             } else if (status != null) {
@@ -80,8 +92,11 @@ public class TicketService {
 
         return responses;
     }
-    public TicketResponse getTicketById(Long id) {
+    public TicketResponse getTicketById(long id,Authentication authentication) {
         Ticket ticket = findTicketEntityById(id);
+        User user=getCurrentUser(authentication);
+        validateTicketAccess(user,ticket);
+
         return mapTicketToResponse(ticket);
     }
     public TicketResponse createTicket(createTicketRequest request, Authentication authentication) {
@@ -98,8 +113,11 @@ public class TicketService {
         Ticket savedTicket = ticketRepository.save(ticket);
         return mapTicketToResponse(savedTicket);
     }
-    public TicketResponse updateTicketStatus(Long id, UpdateTicketStatusRequest request) {
+    public TicketResponse updateTicketStatus(Long id, UpdateTicketStatusRequest request,Authentication authentication) {
         Ticket ticket = findTicketEntityById(id);
+        User user=getCurrentUser(authentication);
+        validateTicketAccess(user,ticket);
+
         TicketStatus newStatus = request.getStatus();
 
         if (ticket.getStatus() == TicketStatus.CLOSED) {
@@ -115,8 +133,10 @@ public class TicketService {
 
         return mapTicketToResponse(updatedTicket);
     }
-    public List<CommentResponse> getCommentsByTicketId(Long ticketId) {
-        findTicketEntityById(ticketId);
+    public List<CommentResponse> getCommentsByTicketId(long ticketId,Authentication authentication) {
+        Ticket ticket=findTicketEntityById(ticketId);
+        User user=getCurrentUser(authentication);
+        validateTicketAccess(user, ticket);
 
         List<Comment> comments = commentRepository.findByTicketId(ticketId);
         List<CommentResponse> responses = new ArrayList<>();
@@ -129,15 +149,14 @@ public class TicketService {
     }
     public CommentResponse addCommentToTicket(Long ticketId, addCommentRequest request,Authentication authentication) {
         Ticket ticket = findTicketEntityById(ticketId);
-        String email=authentication.getName();
-        User currUser=userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
+        User user=getCurrentUser(authentication);
+        validateTicketAccess(user,ticket);
 
         Comment comment = new Comment();
-
         comment.setContent(request.getContent());
         comment.setCreatedAt(LocalDateTime.now());
         comment.setTicket(ticket);
-        comment.setAuthor(currUser);
+        comment.setAuthor(user);
 
         Comment savedComment = commentRepository.save(comment);
         return mapCommentToResponse(savedComment);
@@ -179,5 +198,26 @@ public class TicketService {
             response.setAuthorName(comment.getAuthor().getFullName());
         }
         return response;
+    }
+    private User getCurrentUser(Authentication authentication){
+        String email=authentication.getName();
+        return userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
+    }
+    private boolean canAccessTicket(User user,Ticket ticket){
+        if (user.getRole()==Role.ADMIN){
+            return true;
+        }
+        if (user.getRole()==Role.CLIENT){
+            return ticket.getCreatedBy()!=null && ticket.getCreatedBy().getId().equals(user.getId());
+        }
+        if (user.getRole()==Role.AGENT){
+            return ticket.getAssignedTo()!=null && ticket.getAssignedTo().getId().equals(user.getId());
+        }
+        return false;
+    }
+    private void validateTicketAccess(User user,Ticket ticket){
+        if (!canAccessTicket(user,ticket)){
+            throw new ResourceNotFoundException("Ticket with id "+ticket.getId()+" not found");
+        }
     }
 }
