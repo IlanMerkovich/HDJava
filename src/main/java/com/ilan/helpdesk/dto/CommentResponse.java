@@ -5,16 +5,26 @@ import java.time.LocalDateTime;
 public class CommentResponse {
     private long id;
     private String authorName;
+    private String authorEmail;
     private String content;
     private LocalDateTime createdAt;
     public CommentResponse(){
 
     }
-    public CommentResponse(long id,String authorName,String content,LocalDateTime createdAt){
+    public CommentResponse(long id,String authorName,String content,LocalDateTime createdAt,String authorEmail){
         this.id=id;
         this.authorName=authorName;
+        this.authorEmail=authorEmail;
         this.content=content;
         this.createdAt=createdAt;
+    }
+
+    public String getAuthorEmail() {
+        return authorEmail;
+    }
+
+    public void setAuthorEmail(String authorEmail) {
+        this.authorEmail = authorEmail;
     }
 
     public String getAuthorName() {

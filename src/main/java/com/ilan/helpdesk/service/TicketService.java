@@ -128,14 +128,17 @@ public class TicketService {
         return responses;
     }
 
-    public CommentResponse addCommentToTicket(Long ticketId, addCommentRequest request) {
+    public CommentResponse addCommentToTicket(Long ticketId, addCommentRequest request,Authentication authentication) {
         Ticket ticket = findTicketEntityById(ticketId);
+        String email=authentication.getName();
+        User currUser=userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
 
         Comment comment = new Comment();
-        comment.setAuthorName(request.getAuthorName());
+
         comment.setContent(request.getContent());
         comment.setCreatedAt(LocalDateTime.now());
         comment.setTicket(ticket);
+        comment.setAuthor(currUser);
 
         Comment savedComment = commentRepository.save(comment);
         return mapCommentToResponse(savedComment);
@@ -166,11 +169,15 @@ public class TicketService {
 
     private CommentResponse mapCommentToResponse(Comment comment) {
         CommentResponse response = new CommentResponse();
+
         response.setId(comment.getId());
-        response.setAuthorName(comment.getAuthorName());
         response.setContent(comment.getContent());
         response.setCreatedAt(comment.getCreatedAt());
 
+        if (comment.getAuthor()!=null){
+            response.setAuthorEmail(comment.getAuthor().getEmail());
+            response.setAuthorName(comment.getAuthor().getFullName());
+        }
         return response;
     }
 }

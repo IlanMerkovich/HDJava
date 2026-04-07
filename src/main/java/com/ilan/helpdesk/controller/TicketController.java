@@ -59,8 +59,9 @@ public class TicketController{
 
     @PostMapping("/{id}/comments")
     @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
-    public CommentResponse addCommentToTicket(@PathVariable long id,@Valid @RequestBody addCommentRequest request){
-        return ticketService.addCommentToTicket(id,request);
+    public CommentResponse addCommentToTicket(@PathVariable long id,@Valid @RequestBody addCommentRequest request
+    ,Authentication authentication){
+        return ticketService.addCommentToTicket(id,request,authentication);
     }
 
 
