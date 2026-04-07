@@ -5,14 +5,18 @@ import com.ilan.helpdesk.dto.CommentResponse;
 import com.ilan.helpdesk.dto.createTicketRequest;
 import com.ilan.helpdesk.dto.TicketResponse;
 import com.ilan.helpdesk.dto.UpdateTicketStatusRequest;
+import com.ilan.helpdesk.enums.Role;
 import com.ilan.helpdesk.enums.TicketPriority;
 import com.ilan.helpdesk.enums.TicketStatus;
 import com.ilan.helpdesk.exception.InvalidTicketStateException;
 import com.ilan.helpdesk.exception.ResourceNotFoundException;
 import com.ilan.helpdesk.model.Comment;
 import com.ilan.helpdesk.model.Ticket;
+import com.ilan.helpdesk.model.User;
 import com.ilan.helpdesk.repository.CommentRepository;
 import com.ilan.helpdesk.repository.TicketRepository;
+import com.ilan.helpdesk.repository.UserRepository;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,23 +28,44 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final CommentRepository commentRepository;
+    private final UserRepository userRepository;
 
-    public TicketService(TicketRepository ticketRepository, CommentRepository commentRepository) {
+    public TicketService(TicketRepository ticketRepository, CommentRepository commentRepository,UserRepository userRepository) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
+        this.userRepository=userRepository;
     }
 
-    public List<TicketResponse> getAllTickets(TicketStatus status, TicketPriority priority) {
+    public List<TicketResponse> getAllTickets(TicketStatus status,
+                                              TicketPriority priority,
+                                              Authentication authentication) {
+        String email = authentication.getName();
+
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
         List<Ticket> tickets;
 
-        if (status != null && priority != null) {
-            tickets = ticketRepository.findByStatusAndPriority(status, priority);
-        } else if (status != null) {
-            tickets = ticketRepository.findByStatus(status);
-        } else if (priority != null) {
-            tickets = ticketRepository.findByPriority(priority);
+        if (currentUser.getRole() == Role.CLIENT) {
+            if (status != null && priority != null) {
+                tickets = ticketRepository.findByCreatedByAndStatusAndPriority(currentUser, status, priority);
+            } else if (status != null) {
+                tickets = ticketRepository.findByCreatedByAndStatus(currentUser, status);
+            } else if (priority != null) {
+                tickets = ticketRepository.findByCreatedByAndPriority(currentUser, priority);
+            } else {
+                tickets = ticketRepository.findByCreatedBy(currentUser);
+            }
         } else {
-            tickets = ticketRepository.findAll();
+            if (status != null && priority != null) {
+                tickets = ticketRepository.findByStatusAndPriority(status, priority);
+            } else if (status != null) {
+                tickets = ticketRepository.findByStatus(status);
+            } else if (priority != null) {
+                tickets = ticketRepository.findByPriority(priority);
+            } else {
+                tickets = ticketRepository.findAll();
+            }
         }
 
         List<TicketResponse> responses = new ArrayList<>();
@@ -51,13 +76,18 @@ public class TicketService {
         return responses;
     }
 
+
     public TicketResponse getTicketById(Long id) {
         Ticket ticket = findTicketEntityById(id);
         return mapTicketToResponse(ticket);
     }
 
-    public TicketResponse createTicket(createTicketRequest request) {
+    public TicketResponse createTicket(createTicketRequest request, Authentication authentication) {
+        String email=authentication.getName();
+        User user=userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
+
         Ticket ticket = new Ticket();
+        ticket.setCreatedBy(user);
         ticket.setTitle(request.getTitle());
         ticket.setDescription(request.getDescription());
         ticket.setStatus(TicketStatus.OPEN);
@@ -117,22 +147,19 @@ public class TicketService {
     }
 
     private TicketResponse mapTicketToResponse(Ticket ticket) {
-        List<CommentResponse> commentResponses = new ArrayList<>();
-
-        if (ticket.getComments() != null) {
-            for (Comment comment : ticket.getComments()) {
-                commentResponses.add(mapCommentToResponse(comment));
-            }
-        }
-
         TicketResponse response = new TicketResponse();
         response.setId(ticket.getId());
         response.setTitle(ticket.getTitle());
         response.setDescription(ticket.getDescription());
         response.setStatus(ticket.getStatus());
         response.setPriority(ticket.getPriority());
-        response.setCommentsCount(commentResponses.size());
-        response.setComments(commentResponses);
+
+        if (ticket.getCreatedBy() != null) {
+            response.setCreatedByEmail(ticket.getCreatedBy().getEmail());
+        }
+
+        response.setCommentsCount(0);
+        response.setComments(new ArrayList<>());
 
         return response;
     }

@@ -18,11 +18,13 @@ public class Comment {
     private String content;
     @Column(nullable = false)
     private LocalDateTime createdAt;
-
     @ManyToOne(fetch = FetchType.LAZY) //many to one, 1 ticket with many comments
     @JoinColumn(name = "ticket_id",nullable = false) //foreign key from ticket table
     @JsonBackReference
     private Ticket ticket;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id",nullable = false)
+    private User author;
 
     public Comment() {
     }
@@ -32,6 +34,13 @@ public class Comment {
         this.content = content;
         this.createdAt = createdAt;
         this.ticket=ticket;
+    }
+
+    public User getAuthor() {
+        return author;
+    }
+    public void setAuthor(User author) {
+        this.author = author;
     }
     public Long getId() {
         return id;

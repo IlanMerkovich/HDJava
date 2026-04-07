@@ -13,11 +13,13 @@ public class TicketResponse {
     private TicketPriority priority;
     private int commentsCount;
     private List<CommentResponse> comments;
+    private String createdByEmail;
 
     public TicketResponse() {
     }
 
-    public TicketResponse(Long id, String title, String description, TicketStatus status, TicketPriority priority, int commentsCount, List<CommentResponse> comments){
+    public TicketResponse(Long id, String title, String description, TicketStatus status, TicketPriority priority, int commentsCount, List<CommentResponse> comments,
+    String createdByEmail){
         this.id = id;
         this.title = title;
         this.description = description;
@@ -25,6 +27,7 @@ public class TicketResponse {
         this.priority = priority;
         this.commentsCount = commentsCount;
         this.comments = comments;
+        this.createdByEmail=createdByEmail;
     }
 
     public Long getId() {
@@ -81,5 +84,13 @@ public class TicketResponse {
 
     public void setComments(List<CommentResponse> comments) {
         this.comments = comments;
+    }
+
+    public String getCreatedByEmail() {
+        return createdByEmail;
+    }
+
+    public void setCreatedByEmail(String createdByEmail) {
+            this.createdByEmail = createdByEmail;
     }
 }
