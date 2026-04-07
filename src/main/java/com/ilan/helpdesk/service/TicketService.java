@@ -1,14 +1,11 @@
 package com.ilan.helpdesk.service;
 
-import com.ilan.helpdesk.dto.addCommentRequest;
-import com.ilan.helpdesk.dto.CommentResponse;
-import com.ilan.helpdesk.dto.createTicketRequest;
-import com.ilan.helpdesk.dto.TicketResponse;
-import com.ilan.helpdesk.dto.UpdateTicketStatusRequest;
+import com.ilan.helpdesk.dto.*;
 import com.ilan.helpdesk.enums.Role;
 import com.ilan.helpdesk.enums.TicketPriority;
 import com.ilan.helpdesk.enums.TicketStatus;
 import com.ilan.helpdesk.exception.InvalidTicketStateException;
+import com.ilan.helpdesk.exception.InvalidUserRoleException;
 import com.ilan.helpdesk.exception.ResourceNotFoundException;
 import com.ilan.helpdesk.model.Comment;
 import com.ilan.helpdesk.model.Ticket;
@@ -30,15 +27,23 @@ public class TicketService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
 
+    public TicketResponse assignTicket(long tickedId, assignTicketRequest request){
+        Ticket ticket=findTicketEntityById(tickedId);
+        User agent=userRepository.findById(request.getAgentId()).orElseThrow(()->new ResourceNotFoundException("agent with id "+request.getAgentId()+" not found"));
+
+        if (agent.getRole()!=Role.AGENT){
+            throw new InvalidUserRoleException("cant assign ticket to a non-agent user");
+        }
+        ticket.setAssignedTo(agent);
+        Ticket updatedTicket=ticketRepository.save(ticket);
+        return mapTicketToResponse(updatedTicket);
+    }
     public TicketService(TicketRepository ticketRepository, CommentRepository commentRepository,UserRepository userRepository) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.userRepository=userRepository;
     }
-
-    public List<TicketResponse> getAllTickets(TicketStatus status,
-                                              TicketPriority priority,
-                                              Authentication authentication) {
+    public List<TicketResponse> getAllTickets(TicketStatus status, TicketPriority priority, Authentication authentication) {
         String email = authentication.getName();
 
         User currentUser = userRepository.findByEmail(email)
@@ -75,13 +80,10 @@ public class TicketService {
 
         return responses;
     }
-
-
     public TicketResponse getTicketById(Long id) {
         Ticket ticket = findTicketEntityById(id);
         return mapTicketToResponse(ticket);
     }
-
     public TicketResponse createTicket(createTicketRequest request, Authentication authentication) {
         String email=authentication.getName();
         User user=userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
@@ -96,7 +98,6 @@ public class TicketService {
         Ticket savedTicket = ticketRepository.save(ticket);
         return mapTicketToResponse(savedTicket);
     }
-
     public TicketResponse updateTicketStatus(Long id, UpdateTicketStatusRequest request) {
         Ticket ticket = findTicketEntityById(id);
         TicketStatus newStatus = request.getStatus();
@@ -114,7 +115,6 @@ public class TicketService {
 
         return mapTicketToResponse(updatedTicket);
     }
-
     public List<CommentResponse> getCommentsByTicketId(Long ticketId) {
         findTicketEntityById(ticketId);
 
@@ -127,7 +127,6 @@ public class TicketService {
 
         return responses;
     }
-
     public CommentResponse addCommentToTicket(Long ticketId, addCommentRequest request,Authentication authentication) {
         Ticket ticket = findTicketEntityById(ticketId);
         String email=authentication.getName();
@@ -143,12 +142,10 @@ public class TicketService {
         Comment savedComment = commentRepository.save(comment);
         return mapCommentToResponse(savedComment);
     }
-
     private Ticket findTicketEntityById(Long id) {
         return ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket with id " + id + " not found"));
     }
-
     private TicketResponse mapTicketToResponse(Ticket ticket) {
         TicketResponse response = new TicketResponse();
         response.setId(ticket.getId());
@@ -160,13 +157,16 @@ public class TicketService {
         if (ticket.getCreatedBy() != null) {
             response.setCreatedByEmail(ticket.getCreatedBy().getEmail());
         }
+        if (ticket.getAssignedTo()!=null){
+            response.setAssignedToFullName(ticket.getAssignedTo().getFullName());
+            response.setAssignedToEmail(ticket.getAssignedTo().getEmail());
+        }
 
         response.setCommentsCount(0);
         response.setComments(new ArrayList<>());
 
         return response;
     }
-
     private CommentResponse mapCommentToResponse(Comment comment) {
         CommentResponse response = new CommentResponse();
 

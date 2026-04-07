@@ -64,6 +64,12 @@ public class TicketController{
         return ticketService.addCommentToTicket(id,request,authentication);
     }
 
+    @PatchMapping("/{id}/assign")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    public TicketResponse assignTicket(@PathVariable long id,@Valid @RequestBody assignTicketRequest request){
+        return ticketService.assignTicket(id,request);
+    }
+
 
 
 }

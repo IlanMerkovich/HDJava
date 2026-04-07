@@ -13,8 +13,6 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(nullable = false)
-    private String authorName;
-    @Column(nullable = false,length = 300)
     private String content;
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -28,14 +26,6 @@ public class Comment {
 
     public Comment() {
     }
-    public Comment(Long id, String authorName, String content, LocalDateTime createdAt,Ticket ticket) {
-        this.id = id;
-        this.authorName = authorName;
-        this.content = content;
-        this.createdAt = createdAt;
-        this.ticket=ticket;
-    }
-
     public User getAuthor() {
         return author;
     }
@@ -47,12 +37,6 @@ public class Comment {
     }
     public void setId(Long id) {
         this.id = id;
-    }
-    public String getAuthorName() {
-        return authorName;
-    }
-    public void setAuthorName(String authorName) {
-        this.authorName = authorName;
     }
     public String getContent() {
         return content;

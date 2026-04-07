@@ -14,6 +14,8 @@ public class TicketResponse {
     private int commentsCount;
     private List<CommentResponse> comments;
     private String createdByEmail;
+    private String assignedToEmail;
+    private String assignedToFullName;
 
     public TicketResponse() {
     }
@@ -30,6 +32,29 @@ public class TicketResponse {
         this.createdByEmail=createdByEmail;
     }
 
+    public String getAssignedToFullName() {
+        return assignedToFullName;
+    }
+
+    public void setAssignedToFullName(String assignedToFullName) {
+        assignedToFullName = assignedToFullName;
+    }
+
+    public void setAssignedToEmail(String assignedToEmail) {
+        this.assignedToEmail = assignedToEmail;
+    }
+
+    public void setGetAssignedToFullName(String getAssignedToFullName) {
+        this.assignedToFullName = getAssignedToFullName;
+    }
+
+    public String getAssignedToEmail() {
+        return assignedToEmail;
+    }
+
+    public String getGetAssignedToFullName() {
+        return assignedToFullName;
+    }
     public Long getId() {
         return id;
     }

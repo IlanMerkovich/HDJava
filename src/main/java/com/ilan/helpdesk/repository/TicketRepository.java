@@ -18,4 +18,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByCreatedByAndStatus(User user, TicketStatus status);
     List<Ticket> findByCreatedByAndStatusAndPriority(User user,TicketStatus status,TicketPriority priority);
     List<Ticket> findByCreatedByAndPriority(User currUser, TicketPriority priority);
+    List<Ticket> findByAssignedTo(User user);
+    List<Ticket> findByAssignedToAndStatus(User user, TicketStatus status);
+    List<Ticket> findByAssignedToAndPriority(User user,TicketPriority priority);
+    List<Ticket> findByAssignedToAndStatusAndPriority(User user, TicketStatus status, TicketPriority priority);
 }

@@ -6,8 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.nio.file.AccessDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -90,5 +89,15 @@ public class GlobalExceptionHandler {
                 null
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
+    @ExceptionHandler(InvalidUserRoleException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidRole(InvalidUserRoleException ex){
+        ApiErrorResponse errorResponse=new ApiErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                ex.getMessage(),
+                LocalDateTime.now(),
+                null);
+        return new ResponseEntity<>(errorResponse,HttpStatus.FORBIDDEN);
+
     }
 }
