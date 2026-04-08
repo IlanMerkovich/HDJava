@@ -24,11 +24,16 @@ public class TicketController{
 
     @GetMapping
     @PreAuthorize("hasAnyRole('CLIENT','AGENT','ADMIN')")
-    public List<TicketResponse> getAllTickets(
+    public pagedTicketResponse getAllTickets(
             @RequestParam(required = false) TicketStatus status,
             @RequestParam(required = false) TicketPriority priority,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction,
+            @RequestParam(required = false) String query,
             Authentication authentication) {
-        return ticketService.getAllTickets(status,priority,authentication);
+        return ticketService.getAllTicketsPaged(status, priority, page, size, sortBy, direction, authentication,query);
     }
 
     @GetMapping("/{id}/history")

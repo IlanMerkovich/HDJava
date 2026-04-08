@@ -18,7 +18,10 @@ import com.ilan.helpdesk.repository.TicketRepository;
 import com.ilan.helpdesk.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,6 +35,62 @@ public class TicketService {
     private final UserRepository userRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
 
+    public pagedTicketResponse getAllTicketsPaged(TicketStatus status, TicketPriority priority, int page, int size,
+                                                  String sortBy, String direction, Authentication authentication,String query) {
+        User currentUser = getCurrentUser(authentication);
+
+        if (page < 0) {
+            page = 0;
+        }
+
+        if (size <= 0) {
+            size = 10;
+        }
+
+        if (size > 100) {
+            size = 100;
+        }
+
+        List<String> allowedSortFields = List.of("id", "title", "status", "priority");
+        if (!allowedSortFields.contains(sortBy)) {
+            sortBy = "id";
+        }
+
+        Sort sort;
+        if (direction.equalsIgnoreCase("desc")) {
+            sort = Sort.by(sortBy).descending();
+        } else {
+            sort = Sort.by(sortBy).ascending();
+        }
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Ticket> ticketPage;
+        if (currentUser.getRole()== Role.CLIENT){
+            ticketPage=ticketRepository.searchClientTickets(currentUser,status,priority,query,pageable);
+        } else if (currentUser.getRole()==Role.AGENT){
+            ticketPage=ticketRepository.searchAgentTickets(currentUser,status,priority,query,pageable);
+        }
+        else {
+            ticketPage=ticketRepository.searchAdminTickets(status,priority,query,pageable);
+        }
+
+        List<TicketResponse> responses = new ArrayList<>();
+        for (Ticket ticket : ticketPage.getContent()) {
+            responses.add(mapTicketToResponse(ticket));
+        }
+
+        pagedTicketResponse response = new pagedTicketResponse();
+        response.setContent(responses);
+        response.setPage(ticketPage.getNumber());
+        response.setSize(ticketPage.getSize());
+        response.setTotalElements(ticketPage.getTotalElements());
+        response.setTotalPages(ticketPage.getTotalPages());
+        response.setFirst(ticketPage.isFirst());
+        response.setLast(ticketPage.isLast());
+
+        return response;
+    }
     public TicketResponse assignTicket(long ticketId, assignTicketRequest request, Authentication authentication) {
         Ticket ticket = findTicketEntityById(ticketId);
         User changedBy = getCurrentUser(authentication);
@@ -61,6 +120,7 @@ public class TicketService {
         this.userRepository=userRepository;
         this.ticketHistoryRepository=ticketHistoryRepository;
     }
+    /*
     public List<TicketResponse> getAllTickets(TicketStatus status, TicketPriority priority, Authentication authentication) {
         String email = authentication.getName();
 
@@ -110,6 +170,7 @@ public class TicketService {
 
         return responses;
     }
+     */
     public TicketResponse getTicketById(long id,Authentication authentication) {
         Ticket ticket = findTicketEntityById(id);
         User user=getCurrentUser(authentication);
