@@ -3,14 +3,11 @@ package com.ilan.helpdesk.controller;
 import com.ilan.helpdesk.dto.*;
 import com.ilan.helpdesk.enums.TicketPriority;
 import com.ilan.helpdesk.enums.TicketStatus;
-import com.ilan.helpdesk.model.Comment;
-import com.ilan.helpdesk.model.Ticket;
 import com.ilan.helpdesk.service.TicketService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
-import java.util.ArrayList;
 import java.util.List;
 
 @RequestMapping("/api/tickets") //this means all methods start from this path//
@@ -87,7 +84,11 @@ public class TicketController{
         return ticketService.assignTicket(id,request,authentication);
     }
 
-
+    @PatchMapping("/{id}/reopen")
+    @PreAuthorize("hasAnyRole('CLIENT','ADMIN')")
+    public TicketResponse reopenTicket(@PathVariable long id,Authentication authentication){
+        return  ticketService.reopenTicket(id,authentication);
+    }
 
 }
 

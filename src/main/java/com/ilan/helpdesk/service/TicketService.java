@@ -398,4 +398,37 @@ public class TicketService {
             return ticketRepository.findByCreatedBy(user);
         }
     }
+    public TicketResponse reopenTicket(long id,Authentication authentication){
+        Ticket ticket = findTicketEntityById(id);
+        User user=getCurrentUser(authentication);
+
+        if (user.getRole()!=Role.ADMIN && user.getRole()!=Role.CLIENT){
+            throw new InvalidUserRoleException("Only client or admin can reopen tickets");
+        }
+        if (user.getRole()==Role.CLIENT){
+            validateTicketAccess(user,ticket);
+        }
+        if (ticket.getStatus()!=TicketStatus.CLOSED){
+            throw new InvalidTicketStateException("Only closed tickets can be reopened");
+        }
+
+        TicketStatus oldStatus=ticket.getStatus();
+        ticket.setStatus(TicketStatus.OPEN);
+
+        Ticket updatedTicket=ticketRepository.save(ticket);
+        reopenHistoryChange(updatedTicket,oldStatus,TicketStatus.OPEN,user);
+
+        return mapTicketToResponse(updatedTicket);
+    }
+    private void reopenHistoryChange(Ticket ticket, TicketStatus oldStatus, TicketStatus newStatus, User changedBy){
+        TicketHistory ticketHistory=new TicketHistory();
+
+        ticketHistory.setTicket(ticket);
+        ticketHistory.setActionType(TicketHistoryActionType.REOPENED);
+        ticketHistory.setChangedBy(changedBy);
+        ticketHistory.setOldStatus(oldStatus);
+        ticketHistory.setNewStatus(newStatus);
+        ticketHistory.setChangedAt(LocalDateTime.now());
+        ticketHistoryRepository.save(ticketHistory);
+    }
 }
