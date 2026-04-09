@@ -360,6 +360,7 @@ public class TicketService {
         User user=getCurrentUser(authentication);
         ticketStatsResponse response=new ticketStatsResponse();
         List<Ticket>tickets=getVisibleTicketsForStats(user);
+        response.setTotalTickets(tickets.size());
 
         for (Ticket ticket : tickets) {
             if (ticket.getStatus() == TicketStatus.OPEN) {
