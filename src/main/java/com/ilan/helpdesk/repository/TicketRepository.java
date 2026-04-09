@@ -10,13 +10,17 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     Page<Ticket> findByCreatedBy(User user, Pageable pageable);
+    List<Ticket> findByCreatedBy(User user);
     Page<Ticket> findByCreatedByAndStatus(User user, TicketStatus status, Pageable pageable);
     Page<Ticket> findByCreatedByAndPriority(User user, TicketPriority priority, Pageable pageable);
     Page<Ticket> findByCreatedByAndStatusAndPriority(User user, TicketStatus status, TicketPriority priority, Pageable pageable);
     Page<Ticket> findByAssignedTo(User user, Pageable pageable);
+    List<Ticket> findByAssignedTo(User user);
     Page<Ticket> findByAssignedToAndStatus(User user, TicketStatus status, Pageable pageable);
     Page<Ticket> findByAssignedToAndPriority(User user, TicketPriority priority, Pageable pageable);
     Page<Ticket> findByAssignedToAndStatusAndPriority(User user, TicketStatus status, TicketPriority priority, Pageable pageable);

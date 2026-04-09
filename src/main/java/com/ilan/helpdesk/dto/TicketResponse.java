@@ -3,6 +3,7 @@ package com.ilan.helpdesk.dto;
 import com.ilan.helpdesk.enums.TicketPriority;
 import com.ilan.helpdesk.enums.TicketStatus;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class TicketResponse {
@@ -16,6 +17,8 @@ public class TicketResponse {
     private String createdByEmail;
     private String assignedToEmail;
     private String assignedToFullName;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     public TicketResponse() {
     }
@@ -90,5 +93,17 @@ public class TicketResponse {
     }
     public void setAssignedToFullName(String assignedToFullName) {
         this.assignedToFullName = assignedToFullName;
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

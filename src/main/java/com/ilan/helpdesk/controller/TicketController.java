@@ -36,6 +36,12 @@ public class TicketController{
         return ticketService.getAllTicketsPaged(status, priority, page, size, sortBy, direction, authentication,query);
     }
 
+    @GetMapping("/stats")
+    @PreAuthorize("hasAnyRole('CLIENT','ADMIN','AGENT')")
+    public ticketStatsResponse getTicketStats(Authentication authentication){
+        return ticketService.getTicketStats(authentication);
+    }
+
     @GetMapping("/{id}/history")
     @PreAuthorize("hasAnyRole('CLIENT','AGENT','ADMIN')")
     public List<ticketHistoryResponse> getTicketHistory(@PathVariable long id,Authentication authentication){

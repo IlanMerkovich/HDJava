@@ -5,6 +5,7 @@ import com.ilan.helpdesk.enums.TicketPriority;
 import com.ilan.helpdesk.enums.TicketStatus;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,9 +42,13 @@ public class Ticket {
     @JsonManagedReference
     private List<Comment> comments = new ArrayList<>();
 
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
     public Ticket() {
     }
-
     public Ticket(Long id, String title, String description, TicketStatus status, TicketPriority priority) {
         this.id = id;
         this.title = title;
@@ -51,68 +56,72 @@ public class Ticket {
         this.status = status;
         this.priority = priority;
     }
-
     public Long getId() {
         return id;
     }
-
     public String getTitle() {
         return title;
     }
-
     public String getDescription() {
         return description;
     }
-
     public TicketStatus getStatus() {
         return status;
     }
-
     public TicketPriority getPriority() {
         return priority;
     }
-
     public List<Comment> getComments() {
         return comments;
     }
-
     public void setId(Long id) {
         this.id = id;
     }
-
     public void setTitle(String title) {
         this.title = title;
     }
-
     public void setDescription(String description) {
         this.description = description;
     }
-
     public void setStatus(TicketStatus status) {
         this.status = status;
     }
-
     public void setPriority(TicketPriority priority) {
         this.priority = priority;
     }
-
     public void setComments(List<Comment> comments) {
         this.comments = comments;
     }
-
     public User getCreatedBy() {
         return createdBy;
     }
-
     public void setCreatedBy(User createdBy) {
         this.createdBy = createdBy;
     }
-
     public User getAssignedTo() {
         return assignedTo;
     }
-
     public void setAssignedTo(User assignedTo) {
         this.assignedTo = assignedTo;
     }
+    @PrePersist
+    public void prePersist(){
+        LocalDateTime time=LocalDateTime.now();
+        this.createdAt=time;
+        this.updatedAt=time;
+    }
+    @PreUpdate
+    public void preUpdate(){
+        this.updatedAt=LocalDateTime.now();
+    }
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
 }

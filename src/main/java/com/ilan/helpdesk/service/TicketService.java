@@ -51,7 +51,7 @@ public class TicketService {
             size = 100;
         }
 
-        List<String> allowedSortFields = List.of("id", "title", "status", "priority");
+        List<String> allowedSortFields = List.of("id", "title", "status", "priority","createdAt","updatedAt");
         if (!allowedSortFields.contains(sortBy)) {
             sortBy = "id";
         }
@@ -254,6 +254,8 @@ public class TicketService {
         response.setDescription(ticket.getDescription());
         response.setStatus(ticket.getStatus());
         response.setPriority(ticket.getPriority());
+        response.setCreatedAt(ticket.getCreatedAt());
+        response.setUpdatedAt(ticket.getUpdatedAt());
 
         if (ticket.getCreatedBy() != null) {
             response.setCreatedByEmail(ticket.getCreatedBy().getEmail());
@@ -353,5 +355,46 @@ public class TicketService {
         }
 
         return response;
+    }
+    public ticketStatsResponse getTicketStats(Authentication authentication){
+        User user=getCurrentUser(authentication);
+        ticketStatsResponse response=new ticketStatsResponse();
+        List<Ticket>tickets=getVisibleTicketsForStats(user);
+
+        for (Ticket ticket : tickets) {
+            if (ticket.getStatus() == TicketStatus.OPEN) {
+                response.setOpenTickets(response.getOpenTickets() + 1);
+            } else if (ticket.getStatus() == TicketStatus.IN_PROGRESS) {
+                response.setInProgressTickets(response.getInProgressTickets() + 1);
+            } else if (ticket.getStatus() == TicketStatus.RESOLVED) {
+                response.setResolvedTickets(response.getResolvedTickets() + 1);
+            } else if (ticket.getStatus() == TicketStatus.CLOSED) {
+                response.setClosedTickets(response.getClosedTickets() + 1);
+            }
+            if (ticket.getPriority() == TicketPriority.HIGH) {
+                response.setHighPriorityTickets(response.getHighPriorityTickets() + 1);
+            } else if (ticket.getPriority() == TicketPriority.MEDIUM) {
+                response.setMediumPriorityTickets(response.getMediumPriorityTickets() + 1);
+            } else if (ticket.getPriority() == TicketPriority.LOW) {
+                response.setLowPriorityTickets(response.getLowPriorityTickets() + 1);
+            }
+            if (ticket.getAssignedTo() != null) {
+                response.setAssignedTickets(response.getAssignedTickets() + 1);
+            } else {
+                response.setUnassignedTickets(response.getUnassignedTickets() + 1);
+            }
+        }
+        return response;
+    }
+    private List<Ticket> getVisibleTicketsForStats(User user){
+        if (user.getRole()==Role.ADMIN){
+            return ticketRepository.findAll();
+        }
+        if (user.getRole()==Role.AGENT){
+            return ticketRepository.findByAssignedTo(user);
+        }
+        else{
+            return ticketRepository.findByCreatedBy(user);
+        }
     }
 }
