@@ -1,10 +1,7 @@
 package com.ilan.helpdesk.service;
 
 import com.ilan.helpdesk.dto.*;
-import com.ilan.helpdesk.enums.Role;
-import com.ilan.helpdesk.enums.TicketHistoryActionType;
-import com.ilan.helpdesk.enums.TicketPriority;
-import com.ilan.helpdesk.enums.TicketStatus;
+import com.ilan.helpdesk.enums.*;
 import com.ilan.helpdesk.exception.InvalidTicketStateException;
 import com.ilan.helpdesk.exception.InvalidUserRoleException;
 import com.ilan.helpdesk.exception.ResourceNotFoundException;
@@ -34,6 +31,7 @@ public class TicketService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
+    private final NotificationService notificationService;
 
     public PagedTicketResponse getAllTicketsPaged(TicketStatus status, TicketPriority priority, int page, int size,
                                                   String sortBy, String direction, Authentication authentication, String query) {
@@ -111,14 +109,18 @@ public class TicketService {
         ticket.setAssignedTo(agent);
         Ticket updatedTicket = ticketRepository.save(ticket);
         createAssignmentHistory(updatedTicket, oldAssignedToEmail, agent.getEmail(), changedBy);
+        notificationService.createNotification(changedBy,"a ticket was assigned to you: "+updatedTicket.getTitle(),
+                NotificationType.TICKET_ASSIGNED, updatedTicket.getId());
 
         return mapTicketToResponse(updatedTicket);
     }
-    public TicketService(TicketRepository ticketRepository, CommentRepository commentRepository, UserRepository userRepository, TicketHistoryRepository ticketHistoryRepository) {
+    public TicketService(TicketRepository ticketRepository, CommentRepository commentRepository, UserRepository userRepository,
+                         TicketHistoryRepository ticketHistoryRepository,NotificationService notificationService) {
         this.ticketRepository = ticketRepository;
         this.commentRepository = commentRepository;
         this.userRepository=userRepository;
         this.ticketHistoryRepository=ticketHistoryRepository;
+        this.notificationService=notificationService;
     }
     /*
     public List<TicketResponse> getAllTickets(TicketStatus status, TicketPriority priority, Authentication authentication) {
@@ -210,7 +212,14 @@ public class TicketService {
 
         ticket.setStatus(newStatus);
         Ticket updatedTicket = ticketRepository.save(ticket);
-
+        if (newStatus==TicketStatus.RESOLVED){
+            notificationService.createNotification(updatedTicket.getCreatedBy(),"your ticket has been resolved: "+updatedTicket.getTitle(),
+                    NotificationType.TICKET_RESOLVED,updatedTicket.getId());
+        }
+        if (newStatus==TicketStatus.CLOSED){
+            notificationService.createNotification(updatedTicket.getCreatedBy(),"your ticket has been resolved: "+updatedTicket.getTitle(),
+                    NotificationType.TICKET_CLOSED,updatedTicket.getId());
+        }
         createStatusHistory(updatedTicket,oldStatus,newStatus,user);
 
         return mapTicketToResponse(updatedTicket);
@@ -239,8 +248,17 @@ public class TicketService {
         comment.setCreatedAt(LocalDateTime.now());
         comment.setTicket(ticket);
         comment.setAuthor(user);
-
         Comment savedComment = commentRepository.save(comment);
+
+        if (ticket.getCreatedBy()!=null && !ticket.getCreatedBy().getId().equals(user.getId())){
+            notificationService.createNotification(user,"a new comment was added to your ticket: "+ticket.getTitle(),NotificationType.COMMENT_ADDED
+            ,ticket.getId());
+        }
+        if (ticket.getAssignedTo()!=null && !ticket.getAssignedTo().getId().equals(user.getId())){
+            notificationService.createNotification(ticket.getAssignedTo(),"a new comment was added to your ticket: "+ticket.getTitle(),NotificationType.COMMENT_ADDED
+            ,ticket.getId());
+        }
+
         return mapCommentToResponse(savedComment);
     }
     private Ticket findTicketEntityById(Long id) {
@@ -375,7 +393,7 @@ public class TicketService {
 
         return response;
     }
-    private List<Ticket> getVisibleTicketsForStats(User user){
+    /*private List<Ticket> getVisibleTicketsForStats(User user){
         if (user.getRole()==Role.ADMIN){
             return ticketRepository.findAll();
         }
@@ -385,7 +403,7 @@ public class TicketService {
         else{
             return ticketRepository.findByCreatedBy(user);
         }
-    }
+    }*/
     public TicketResponse reopenTicket(long id,Authentication authentication){
         Ticket ticket = findTicketEntityById(id);
         User user=getCurrentUser(authentication);
@@ -404,6 +422,11 @@ public class TicketService {
         ticket.setStatus(TicketStatus.OPEN);
 
         Ticket updatedTicket=ticketRepository.save(ticket);
+        if (updatedTicket.getAssignedTo()!=null){
+            notificationService.createNotification(updatedTicket.getAssignedTo(),"a ticket assigned to you reopened: "+
+                    updatedTicket.getTitle(),NotificationType.TICKET_REOPENED,updatedTicket.getId());
+        }
+
         reopenHistoryChange(updatedTicket,oldStatus,TicketStatus.OPEN,user);
 
         return mapTicketToResponse(updatedTicket);
