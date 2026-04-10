@@ -1,7 +1,9 @@
 package com.ilan.helpdesk.service;
 
 
+import ch.qos.logback.core.util.StringUtil;
 import com.ilan.helpdesk.dto.TicketAttachmentResponse;
+import com.ilan.helpdesk.exception.InvalidAttachmentException;
 import com.ilan.helpdesk.exception.ResourceNotFoundException;
 import com.ilan.helpdesk.model.Ticket;
 import com.ilan.helpdesk.model.TicketAttachment;
@@ -13,8 +15,10 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -25,6 +29,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -34,9 +39,36 @@ public class TicketAttachmentService {
     private final UserRepository userRepository;
     private final Path uploadPath;
     private final TicketService ticketService;
+    private static final Set<String>ALLOWED_EXTENSIONS=Set.of(".png",".jpg",".jpeg","pdf",".txt");
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/png", "image/jpeg", "application/pdf", "text/plain");
+    private void validateAttachmentFile(MultipartFile file){
+        if (file==null || file.isEmpty()){
+            throw new InvalidAttachmentException("file is empty");
+        }
+        String originalFileName=file.getOriginalFilename();
+        if (!StringUtils.hasText(originalFileName)){
+            throw new InvalidAttachmentException("file name is missing");
+        }
+        String cleanFileName=StringUtils.cleanPath(originalFileName);
+        if (cleanFileName.contains("..")){
+            throw new InvalidAttachmentException("invalid file name");
+        }
+        String extension="";
+        int dotIndex=cleanFileName.lastIndexOf(".");
+        if (dotIndex!=-1){
+            extension=cleanFileName.substring(dotIndex).toLowerCase();
+        }
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new InvalidAttachmentException("file extension is not allowed");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
+            throw new InvalidAttachmentException("file type is not allowed");
+        }
+    }
     public TicketAttachmentService(TicketAttachmentRepository ticketAttachmentRepository, TicketRepository ticketRepository,
                                    TicketService ticketService, UserRepository userRepository,
-                                   @Value("${file.upload-dir")String uploadDir)throws IOException{
+                                   @Value("${file.upload-dir}") String uploadDir) throws IOException{
         this.ticketAttachmentRepository=ticketAttachmentRepository;
         this.ticketRepository=ticketRepository;
         this.ticketService=ticketService;
@@ -49,6 +81,8 @@ public class TicketAttachmentService {
         User user=getCurrentUser(authentication);
 
         ticketService.validateTicketAccess(user,ticket);
+        validateAttachmentFile(file);
+
         if (file.isEmpty()){
             throw new IllegalArgumentException("file is empty");
         }

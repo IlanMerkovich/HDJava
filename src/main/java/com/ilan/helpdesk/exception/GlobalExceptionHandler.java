@@ -100,4 +100,14 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse,HttpStatus.FORBIDDEN);
 
     }
+
+    @ExceptionHandler(InvalidAttachmentException.class)
+    public ResponseEntity<ApiErrorResponse>handleInvalidAttachmentException(InvalidAttachmentException ex){
+        ApiErrorResponse errorResponse=new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                LocalDateTime.now(),
+                null);
+        return new ResponseEntity<>(errorResponse,HttpStatus.BAD_REQUEST);
+    }
 }
