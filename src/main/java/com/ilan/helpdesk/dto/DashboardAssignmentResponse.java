@@ -1,9 +1,9 @@
 package com.ilan.helpdesk.dto;
 
-public class DashboardAssignmentResonse {
+public class DashboardAssignmentResponse {
     private long assignedTickets;
     private long unassignedTickets;
-    public DashboardAssignmentResonse(){}
+    public DashboardAssignmentResponse(){}
     public long getUnassignedTickets() {
         return unassignedTickets;
     }

@@ -1,11 +1,9 @@
 package com.ilan.helpdesk.dto;
 
-import com.ilan.helpdesk.model.Ticket;
-
 import java.util.List;
 
 public class DashboardSummaryResponse {
-    private DashboardAssignmentResonse assignmentDashboard;
+    private DashboardAssignmentResponse assignmentDashboard;
     private DashboardStatsResponse statsResponse;
     private DashboardPriorityResponse priorityResponse;
     private List<TicketResponse> recentTickets;
@@ -22,7 +20,7 @@ public class DashboardSummaryResponse {
         this.agentWorkload = agentWorkload;
     }
 
-    public DashboardAssignmentResonse getAssignmentDashboard() {
+    public DashboardAssignmentResponse getAssignmentDashboard() {
         return assignmentDashboard;
     }
 
@@ -42,7 +40,7 @@ public class DashboardSummaryResponse {
         return recentTickets;
     }
 
-    public void setAssignmentDashboard(DashboardAssignmentResonse assignmentDashboard) {
+    public void setAssignmentDashboard(DashboardAssignmentResponse assignmentDashboard) {
         this.assignmentDashboard = assignmentDashboard;
     }
 

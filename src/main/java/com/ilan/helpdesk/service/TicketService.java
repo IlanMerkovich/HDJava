@@ -358,33 +358,21 @@ public class TicketService {
     }
     public TicketStatsResponse getTicketStats(Authentication authentication){
         User user=getCurrentUser(authentication);
-        TicketStatsResponse response=new TicketStatsResponse();
-        List<Ticket>tickets=getVisibleTicketsForStats(user);
-        response.setTotalTickets(tickets.size());
+        DashboardCountsProjection counts=getDashboardCounts(user);
 
-        for (Ticket ticket : tickets) {
-            if (ticket.getStatus() == TicketStatus.OPEN) {
-                response.setOpenTickets(response.getOpenTickets() + 1);
-            } else if (ticket.getStatus() == TicketStatus.IN_PROGRESS) {
-                response.setInProgressTickets(response.getInProgressTickets() + 1);
-            } else if (ticket.getStatus() == TicketStatus.RESOLVED) {
-                response.setResolvedTickets(response.getResolvedTickets() + 1);
-            } else if (ticket.getStatus() == TicketStatus.CLOSED) {
-                response.setClosedTickets(response.getClosedTickets() + 1);
-            }
-            if (ticket.getPriority() == TicketPriority.HIGH) {
-                response.setHighPriorityTickets(response.getHighPriorityTickets() + 1);
-            } else if (ticket.getPriority() == TicketPriority.MEDIUM) {
-                response.setMediumPriorityTickets(response.getMediumPriorityTickets() + 1);
-            } else if (ticket.getPriority() == TicketPriority.LOW) {
-                response.setLowPriorityTickets(response.getLowPriorityTickets() + 1);
-            }
-            if (ticket.getAssignedTo() != null) {
-                response.setAssignedTickets(response.getAssignedTickets() + 1);
-            } else {
-                response.setUnassignedTickets(response.getUnassignedTickets() + 1);
-            }
-        }
+        TicketStatsResponse response=new TicketStatsResponse();
+
+        response.setAssignedTickets(counts.getAssignedTickets());
+        response.setUnassignedTickets(counts.getUnassignedTickets());
+        response.setClosedTickets(counts.getClosedTickets());
+        response.setOpenTickets(counts.getOpenTickets());
+        response.setResolvedTickets(counts.getResolvedTickets());
+        response.setInProgressTickets(counts.getInProgressTickets());
+        response.setHighPriorityTickets(counts.getHighPriorityTickets());
+        response.setMediumPriorityTickets(counts.getMediumPriorityTickets());
+        response.setLowPriorityTickets(counts.getLowPriorityTickets());
+        response.setTotalTickets(counts.getTotalTickets());
+
         return response;
     }
     private List<Ticket> getVisibleTicketsForStats(User user){
@@ -463,50 +451,35 @@ public class TicketService {
     }
     public DashboardSummaryResponse getDashboardSummary(Authentication authentication){
         User user=getCurrentUser(authentication);
-        List<Ticket> tickets=getVisibleTicketsForStats(user);
+        DashboardCountsProjection counts=getDashboardCounts(user);
 
-        DashboardStatsResponse statsResponse=new DashboardStatsResponse();
-        DashboardPriorityResponse priorityResponse=new DashboardPriorityResponse();
-        DashboardAssignmentResonse assignmentResponse=new DashboardAssignmentResonse();
+        DashboardStatsResponse stats=new DashboardStatsResponse();
+        stats.setOpenTickets(counts.getOpenTickets());
+        stats.setClosedTickets(counts.getClosedTickets());
+        stats.setInProgressTickets(counts.getInProgressTickets());
+        stats.setResolvedTickets(counts.getResolvedTickets());
+        stats.setTotalTickets(counts.getTotalTickets());
 
-        statsResponse.setTotalTickets(tickets.size());
-        for (Ticket ticket:tickets){
-            if (ticket.getStatus()==TicketStatus.OPEN){
-                statsResponse.setOpenTickets(statsResponse.getOpenTickets()+1);
-            } else if (ticket.getStatus()==TicketStatus.IN_PROGRESS){
-                statsResponse.setInProgressTickets(statsResponse.getInProgressTickets()+1);
-            } else if (ticket.getStatus()==TicketStatus.RESOLVED){
-                statsResponse.setResolvedTickets(statsResponse.getResolvedTickets()+1);
-            }else {
-                statsResponse.setClosedTickets(statsResponse.getClosedTickets()+1);
-            }
-            if (ticket.getPriority() == TicketPriority.HIGH) {
-                priorityResponse.setHighPriorityTickets(priorityResponse.getHighPriorityTickets() + 1);
-            } else if (ticket.getPriority() == TicketPriority.MEDIUM) {
-                priorityResponse.setMediumPriorityTickets(priorityResponse.getMediumPriorityTickets() + 1);
-            } else if (ticket.getPriority() == TicketPriority.LOW) {
-                priorityResponse.setLowPriorityTickets(priorityResponse.getLowPriorityTickets() + 1);
-            }
+        DashboardAssignmentResponse assignments=new DashboardAssignmentResponse();
+        assignments.setAssignedTickets(counts.getAssignedTickets());
+        assignments.setUnassignedTickets(counts.getUnassignedTickets());
 
-            if (ticket.getAssignedTo() != null) {
-                assignmentResponse.setAssignedTickets(assignmentResponse.getAssignedTickets() + 1);
-            } else {
-                assignmentResponse.setUnassignedTickets(assignmentResponse.getUnassignedTickets() + 1);
-            }
-        }
-        List<TicketResponse> recentTickets = getRecentTicketsForDashboard(user);
-        List<TicketResponse> recentlyUpdatedTickets = getRecentlyUpdatedTicketsForDashboard(user);
+        DashboardPriorityResponse prioritys=new DashboardPriorityResponse();
+        prioritys.setHighPriorityTickets(counts.getHighPriorityTickets());
+        prioritys.setMediumPriorityTickets(counts.getMediumPriorityTickets());
+        prioritys.setLowPriorityTickets(counts.getLowPriorityTickets());
 
-        DashboardSummaryResponse response =new DashboardSummaryResponse();
-        response.setAssignmentDashboard(assignmentResponse);
-        response.setPriorityResponse(priorityResponse);
-        response.setStatsResponse(statsResponse);
+        List<TicketResponse> recentTickets=getRecentTicketsForDashboard(user);
+        List<TicketResponse> recentlyUpdatedTickets=getRecentlyUpdatedTicketsForDashboard(user);
+        List<AgentWorkloadResponse> agentWorkload=getAgenWorkload(user);
+
+        DashboardSummaryResponse response=new DashboardSummaryResponse();
+        response.setAgentWorkload(agentWorkload);
         response.setRecentTickets(recentTickets);
         response.setRecentlyUpdatedTickets(recentlyUpdatedTickets);
-
-        List<AgentWorkloadResponse>agentWorkload=getAgenWorkload(user);
-        response.setAgentWorkload(agentWorkload);
-
+        response.setStatsResponse(stats);
+        response.setPriorityResponse(prioritys);
+        response.setAssignmentDashboard(assignments);
 
         return response;
     }
@@ -515,35 +488,25 @@ public class TicketService {
         if (curr_user.getRole()==Role.CLIENT){
             return result;
         }
-        List<User>users=userRepository.findAll();
-        for(User user:users){
-            if (user.getRole()!=Role.AGENT){
-                continue;
-            }
-            if (curr_user.getRole()==Role.AGENT && !curr_user.getId().equals(user.getId())){
-                continue;
-            }
-            List<Ticket> assignedTickets=ticketRepository.findByAssignedTo(user);
-            AgentWorkloadResponse agentWorkload=new AgentWorkloadResponse();
-            agentWorkload.setAgentEmail(user.getEmail());
-            agentWorkload.setAgentId(user.getId());
-            agentWorkload.setAgentName(user.getFullName());
-            agentWorkload.setAssignedTickets(assignedTickets.size());
+        List<DashboardAgentWorkloadProjection> rows;
+        if (curr_user.getRole()==Role.ADMIN){
+            rows=ticketRepository.getAllAgentsWorkload(Role.AGENT,TicketStatus.OPEN,TicketStatus.IN_PROGRESS,TicketStatus.RESOLVED,TicketStatus.CLOSED,TicketPriority.HIGH);
+        }
+        else
+            rows=ticketRepository.getSingleAgentWorkload(curr_user.getId(),TicketStatus.OPEN,TicketStatus.IN_PROGRESS,TicketStatus.RESOLVED,TicketStatus.CLOSED,TicketPriority.HIGH);
+        for (DashboardAgentWorkloadProjection row:rows){
+            AgentWorkloadResponse response=new AgentWorkloadResponse();
+            response.setAgentId(row.getAgentId());
+            response.setAgentName(row.getAgentFullName());
+            response.setAgentEmail(row.getAgentEmail());
+            response.setOpenedTickets(row.getOpenTickets());
+            response.setClosedTickets(row.getClosedTickets());
+            response.setInProgressTickets(row.getInProgressTickets());
+            response.setResolvedTickets(row.getResolvedTickets());
+            response.setAssignedTickets(row.getAssignedTickets());
+            response.setHighPriorityTickets(row.getHighPriorityTickets());
 
-            for (Ticket ticket:assignedTickets){
-                if(ticket.getStatus()==TicketStatus.OPEN){
-                    agentWorkload.setOpenedTickets(agentWorkload.getOpenedTickets()+1);
-                } else if (ticket.getStatus()==TicketStatus.IN_PROGRESS){
-                    agentWorkload.setInProgressTickets(agentWorkload.getInProgressTickets()+1);
-                } else if (ticket.getStatus()==TicketStatus.RESOLVED){
-                    agentWorkload.setResolvedTickets(agentWorkload.getResolvedTickets()+1);
-                } else if (ticket.getStatus() == TicketStatus.CLOSED) {
-                    agentWorkload.setClosedTickets(agentWorkload.getClosedTickets() + 1);}
-                if (ticket.getPriority() == TicketPriority.HIGH) {
-                    agentWorkload.setHighPriorityTickets(agentWorkload.getHighPriorityTickets() + 1);
-                }
-            }
-            result.add(agentWorkload);
+            result.add(response);
         }
         return result;
     }
@@ -578,6 +541,41 @@ public class TicketService {
         }
 
         return responses;
+    }
+    private DashboardCountsProjection getDashboardCounts(User user) {
+        if (user.getRole() == Role.CLIENT) {
+            return ticketRepository.getClientDashboardCounts(
+                    user,
+                    TicketStatus.OPEN,
+                    TicketStatus.IN_PROGRESS,
+                    TicketStatus.RESOLVED,
+                    TicketStatus.CLOSED,
+                    TicketPriority.HIGH,
+                    TicketPriority.MEDIUM,
+                    TicketPriority.LOW
+            );
+        }
+        if (user.getRole() == Role.AGENT) {
+            return ticketRepository.getAgentDashboardCounts(
+                    user,
+                    TicketStatus.OPEN,
+                    TicketStatus.IN_PROGRESS,
+                    TicketStatus.RESOLVED,
+                    TicketStatus.CLOSED,
+                    TicketPriority.HIGH,
+                    TicketPriority.MEDIUM,
+                    TicketPriority.LOW
+            );
+        }
+        return ticketRepository.getAdminDashboardCounts(
+                TicketStatus.OPEN,
+                TicketStatus.IN_PROGRESS,
+                TicketStatus.RESOLVED,
+                TicketStatus.CLOSED,
+                TicketPriority.HIGH,
+                TicketPriority.MEDIUM,
+                TicketPriority.LOW
+        );
     }
 
 }
