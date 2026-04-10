@@ -1,7 +1,6 @@
 package com.ilan.helpdesk.controller;
 
-import com.ilan.helpdesk.dto.userResponse;
-import com.ilan.helpdesk.model.User;
+import com.ilan.helpdesk.dto.UserResponse;
 import com.ilan.helpdesk.service.UserService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,7 +18,7 @@ public class UserController {
     }
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<userResponse> getAllUsers(){
+    public List<UserResponse> getAllUsers(){
         return userService.getAllUsers();
     }
 }

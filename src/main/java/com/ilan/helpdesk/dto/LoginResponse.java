@@ -2,7 +2,7 @@ package com.ilan.helpdesk.dto;
 
 import com.ilan.helpdesk.enums.Role;
 
-public class loginResponse {
+public class LoginResponse {
     private String fullName;
     private String email;
     private long id;
@@ -10,8 +10,8 @@ public class loginResponse {
     private Role role;
     private String message;
 
-    public loginResponse(){}
-    public loginResponse(String fullName,String email,String password,long id,Role role){
+    public LoginResponse(){}
+    public LoginResponse(String fullName, String email, String password, long id, Role role){
         this.email=email;
         this.id=id;
         this.fullName=fullName;

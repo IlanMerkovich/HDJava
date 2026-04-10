@@ -3,16 +3,16 @@ package com.ilan.helpdesk.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
-public class loginRequest {
+public class LoginRequest {
     @Email(message = "Email must be valid")
     @NotBlank (message = "Email is required")
     private String email;
     @NotBlank (message = "Password is required")
     private String password;
 
-    public loginRequest(){
+    public LoginRequest(){
     }
-    public loginRequest(String email,String password) {
+    public LoginRequest(String email, String password) {
         this.email = email;
         this.password=password;
     }

@@ -1,13 +1,12 @@
 package com.ilan.helpdesk.controller;
-import com.ilan.helpdesk.dto.authResponse;
-import com.ilan.helpdesk.dto.loginRequest;
-import com.ilan.helpdesk.dto.registerRequest;
-import com.ilan.helpdesk.dto.userResponse;
+import com.ilan.helpdesk.dto.AuthResponse;
+import com.ilan.helpdesk.dto.LoginRequest;
+import com.ilan.helpdesk.dto.RegisterRequest;
+import com.ilan.helpdesk.dto.UserResponse;
 import com.ilan.helpdesk.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-import com.ilan.helpdesk.dto.currentUserResponse;
-import com.ilan.helpdesk.exception.ResourceNotFoundException;
+import com.ilan.helpdesk.dto.CurrentUserResponse;
 import org.springframework.security.core.Authentication;
 
 @RestController
@@ -21,17 +20,17 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public userResponse register(@Valid @RequestBody registerRequest request) {
+    public UserResponse register(@Valid @RequestBody RegisterRequest request) {
         return userService.register(request);
     }
 
     @PostMapping("/login")
-    public authResponse login(@Valid @RequestBody loginRequest request) {
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return userService.login(request);
     }
 
     @GetMapping("/me")
-    public currentUserResponse me(Authentication authentication){
+    public CurrentUserResponse me(Authentication authentication){
         return userService.getCurrentUser(authentication);
     }
 

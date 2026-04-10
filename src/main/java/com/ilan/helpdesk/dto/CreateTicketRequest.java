@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public class createTicketRequest {
+public class CreateTicketRequest {
 
     @NotBlank(message = "Title is required") //title must not be empty//
     @Size(min = 3, max = 100, message = "Title must be between 3 and 100 characters") //title must be in size//
@@ -18,9 +18,9 @@ public class createTicketRequest {
     @NotNull(message = "Priority is required")
     private TicketPriority priority;
 
-    public createTicketRequest() {
+    public CreateTicketRequest() {
     }
-    public createTicketRequest(String title, String description,TicketPriority priority) {
+    public CreateTicketRequest(String title, String description, TicketPriority priority) {
         this.title = title;
         this.description = description;
         this.priority=priority;

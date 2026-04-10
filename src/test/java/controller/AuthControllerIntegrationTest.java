@@ -1,7 +1,7 @@
 package controller;
 
-import com.ilan.helpdesk.dto.loginRequest;
-import com.ilan.helpdesk.dto.registerRequest;
+import com.ilan.helpdesk.dto.LoginRequest;
+import com.ilan.helpdesk.dto.RegisterRequest;
 import com.ilan.helpdesk.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ public class AuthControllerIntegrationTest {
 
     @Test
     void register_shouldCreateUserSuccessfully() throws Exception {
-        registerRequest request = new registerRequest();
+        RegisterRequest request = new RegisterRequest();
         request.setFullName("Test User");
         request.setEmail("testuser@example.com");
         request.setPassword("123456");
@@ -55,7 +55,7 @@ public class AuthControllerIntegrationTest {
 
     @Test
     void login_shouldReturnTokenForValidCredentials() throws Exception {
-        registerRequest registerRequest = new registerRequest();
+        RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setFullName("Login User");
         registerRequest.setEmail("loginuser@example.com");
         registerRequest.setPassword("123456");
@@ -65,7 +65,7 @@ public class AuthControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isOk());
 
-        loginRequest loginRequest = new loginRequest();
+        LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("loginuser@example.com");
         loginRequest.setPassword("123456");
 
@@ -82,7 +82,7 @@ public class AuthControllerIntegrationTest {
 
     @Test
     void login_shouldFailForWrongPassword() throws Exception {
-        registerRequest registerRequest = new registerRequest();
+        RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setFullName("Wrong Password User");
         registerRequest.setEmail("wrongpassword@example.com");
         registerRequest.setPassword("123456");
@@ -92,7 +92,7 @@ public class AuthControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(status().isOk());
 
-        loginRequest loginRequest = new loginRequest();
+        LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("wrongpassword@example.com");
         loginRequest.setPassword("654321");
 

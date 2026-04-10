@@ -5,7 +5,7 @@ import com.ilan.helpdesk.enums.TicketStatus;
 
 import java.time.LocalDateTime;
 
-public class ticketHistoryResponse {
+public class TicketHistoryResponse {
 
     private Long id;
     private TicketHistoryActionType actionType;
@@ -17,7 +17,7 @@ public class ticketHistoryResponse {
     private String changedByFullName;
     private LocalDateTime changedAt;
 
-    public ticketHistoryResponse() {
+    public TicketHistoryResponse() {
     }
 
     public Long getId() {

@@ -8,7 +8,7 @@ import com.ilan.helpdesk.model.User;
 import com.ilan.helpdesk.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.ilan.helpdesk.dto.currentUserResponse;
+import com.ilan.helpdesk.dto.CurrentUserResponse;
 import com.ilan.helpdesk.exception.ResourceNotFoundException;
 import org.springframework.security.core.Authentication;
 
@@ -29,7 +29,7 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
-    public userResponse register(registerRequest request) {
+    public UserResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException("Email already exists");
         }
@@ -42,7 +42,7 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-        userResponse response = new userResponse();
+        UserResponse response = new UserResponse();
         response.setId(savedUser.getId());
         response.setFullName(savedUser.getFullName());
         response.setEmail(savedUser.getEmail());
@@ -50,7 +50,7 @@ public class UserService {
 
         return response;
     }
-    public authResponse login(loginRequest request) {
+    public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
@@ -62,7 +62,7 @@ public class UserService {
 
         String token = jwtService.generateToken(user.getEmail());
 
-        authResponse response = new authResponse();
+        AuthResponse response = new AuthResponse();
         response.setId(user.getId());
         response.setFullName(user.getFullName());
         response.setEmail(user.getEmail());
@@ -71,17 +71,17 @@ public class UserService {
 
         return response;
     }
-    public currentUserResponse getCurrentUser(Authentication authentication){
+    public CurrentUserResponse getCurrentUser(Authentication authentication){
         String email=authentication.getName();
         User user=userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
-        currentUserResponse response=new currentUserResponse();
+        CurrentUserResponse response=new CurrentUserResponse();
         response.setEmail(user.getEmail());
         response.setRole(user.getRole());
 
         return response;
     }
-    public userResponse mapToUserResponse(User user){
-        userResponse response=new userResponse();
+    public UserResponse mapToUserResponse(User user){
+        UserResponse response=new UserResponse();
 
         response.setEmail(user.getEmail());
         response.setId(user.getId());
@@ -90,9 +90,9 @@ public class UserService {
         return response;
 
     }
-    public List<userResponse> getAllUsers(){
+    public List<UserResponse> getAllUsers(){
         List<User>users=userRepository.findAll();
-        List<userResponse>userResponses=new ArrayList<>();
+        List<UserResponse>userResponses=new ArrayList<>();
         for (User user:users){
             userResponses.add(mapToUserResponse(user));
         }

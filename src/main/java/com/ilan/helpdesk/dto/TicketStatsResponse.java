@@ -1,6 +1,6 @@
 package com.ilan.helpdesk.dto;
 
-public class ticketStatsResponse {
+public class TicketStatsResponse {
     private long totalTickets;
     private long openTickets;
     private long inProgressTickets;
@@ -11,7 +11,7 @@ public class ticketStatsResponse {
     private long lowPriorityTickets;
     private long assignedTickets;
     private long unassignedTickets;
-    public ticketStatsResponse(){}
+    public TicketStatsResponse(){}
     public long getAssignedTickets() {
         return assignedTickets;
     }

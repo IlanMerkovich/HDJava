@@ -2,22 +2,24 @@ package com.ilan.helpdesk.dto;
 
 import com.ilan.helpdesk.enums.Role;
 
-public class authResponse {
-    private long id;
-    private String email;
+public class UserResponse {
     private String fullName;
+    private String email;
     private Role role;
-    private String token;
-    public authResponse(){}
-    public authResponse(long id,String fullName,String email,Role role,String token){
+    private long id;
+
+    public UserResponse(){};
+    public UserResponse(String fullName, String email, Role role, long id){
         this.email=email;
         this.id=id;
         this.fullName=fullName;
         this.role=role;
-        this.token=token;
     }
     public String getFullName() {
         return fullName;
+    }
+    public String getEmail() {
+        return email;
     }
     public long getId() {
         return id;
@@ -25,25 +27,16 @@ public class authResponse {
     public Role getRole() {
         return role;
     }
-    public String getEmail() {
-        return email;
-    }
-    public String getToken() {
-        return token;
-    }
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+    public void setEmail(String email) {
+        this.email = email;
     }
     public void setRole(Role role) {
         this.role = role;
     }
     public void setId(long id) {
         this.id = id;
-    }
-    public void setEmail(String email) {
-        this.email = email;
-    }
-    public void setToken(String token) {
-        this.token = token;
     }
 }

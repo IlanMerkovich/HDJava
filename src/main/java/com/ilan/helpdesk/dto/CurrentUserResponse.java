@@ -2,11 +2,11 @@ package com.ilan.helpdesk.dto;
 
 import com.ilan.helpdesk.enums.Role;
 
-public class currentUserResponse {
+public class CurrentUserResponse {
     private String email;
     private Role role;
-    public currentUserResponse(){}
-    public currentUserResponse(String email,Role role){
+    public CurrentUserResponse(){}
+    public CurrentUserResponse(String email, Role role){
         this.email=email;
         this.role=role;
     }

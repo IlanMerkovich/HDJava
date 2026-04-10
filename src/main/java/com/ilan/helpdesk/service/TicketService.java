@@ -35,8 +35,8 @@ public class TicketService {
     private final UserRepository userRepository;
     private final TicketHistoryRepository ticketHistoryRepository;
 
-    public pagedTicketResponse getAllTicketsPaged(TicketStatus status, TicketPriority priority, int page, int size,
-                                                  String sortBy, String direction, Authentication authentication,String query) {
+    public PagedTicketResponse getAllTicketsPaged(TicketStatus status, TicketPriority priority, int page, int size,
+                                                  String sortBy, String direction, Authentication authentication, String query) {
         User currentUser = getCurrentUser(authentication);
 
         if (page < 0) {
@@ -80,7 +80,7 @@ public class TicketService {
             responses.add(mapTicketToResponse(ticket));
         }
 
-        pagedTicketResponse response = new pagedTicketResponse();
+        PagedTicketResponse response = new PagedTicketResponse();
         response.setContent(responses);
         response.setPage(ticketPage.getNumber());
         response.setSize(ticketPage.getSize());
@@ -91,7 +91,7 @@ public class TicketService {
 
         return response;
     }
-    public TicketResponse assignTicket(long ticketId, assignTicketRequest request, Authentication authentication) {
+    public TicketResponse assignTicket(long ticketId, AssignTicketRequest request, Authentication authentication) {
         Ticket ticket = findTicketEntityById(ticketId);
         User changedBy = getCurrentUser(authentication);
         User agent = userRepository.findById(request.getAgentId())
@@ -178,7 +178,7 @@ public class TicketService {
 
         return mapTicketToResponse(ticket);
     }
-    public TicketResponse createTicket(createTicketRequest request, Authentication authentication) {
+    public TicketResponse createTicket(CreateTicketRequest request, Authentication authentication) {
         String email=authentication.getName();
         User user=userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
 
@@ -229,7 +229,7 @@ public class TicketService {
 
         return responses;
     }
-    public CommentResponse addCommentToTicket(Long ticketId, addCommentRequest request,Authentication authentication) {
+    public CommentResponse addCommentToTicket(Long ticketId, AddCommentRequest request, Authentication authentication) {
         Ticket ticket = findTicketEntityById(ticketId);
         User user=getCurrentUser(authentication);
         validateTicketAccess(user,ticket);
@@ -326,21 +326,21 @@ public class TicketService {
 
         ticketHistoryRepository.save(history);
     }
-    public List<ticketHistoryResponse> getTicketHistory(long ticketId,Authentication authentication){
+    public List<TicketHistoryResponse> getTicketHistory(long ticketId, Authentication authentication){
         Ticket ticket=findTicketEntityById(ticketId);
         User user=getCurrentUser(authentication);
         validateTicketAccess(user,ticket);
 
         List<TicketHistory> historyList= ticketHistoryRepository.findByTicketIdOrderByChangedAtAsc(ticketId);
-        List<ticketHistoryResponse> responses=new ArrayList<>();
+        List<TicketHistoryResponse> responses=new ArrayList<>();
 
         for (TicketHistory ticketHistory:historyList){
             responses.add(mapHistoryToResponse(ticketHistory));
         }
         return responses;
     }
-    private ticketHistoryResponse mapHistoryToResponse(TicketHistory history) {
-        ticketHistoryResponse response = new ticketHistoryResponse();
+    private TicketHistoryResponse mapHistoryToResponse(TicketHistory history) {
+        TicketHistoryResponse response = new TicketHistoryResponse();
         response.setId(history.getId());
         response.setActionType(history.getActionType());
         response.setOldStatus(history.getOldStatus());
@@ -356,9 +356,9 @@ public class TicketService {
 
         return response;
     }
-    public ticketStatsResponse getTicketStats(Authentication authentication){
+    public TicketStatsResponse getTicketStats(Authentication authentication){
         User user=getCurrentUser(authentication);
-        ticketStatsResponse response=new ticketStatsResponse();
+        TicketStatsResponse response=new TicketStatsResponse();
         List<Ticket>tickets=getVisibleTicketsForStats(user);
         response.setTotalTickets(tickets.size());
 
@@ -431,4 +431,153 @@ public class TicketService {
         ticketHistory.setChangedAt(LocalDateTime.now());
         ticketHistoryRepository.save(ticketHistory);
     }
+    public TicketResponse unassignTicket(long id,Authentication authentication){
+        Ticket ticket=findTicketEntityById(id);
+        User curr_user=getCurrentUser(authentication);
+
+        if (curr_user.getRole()!=Role.ADMIN){
+            throw new InvalidUserRoleException("Non admin user cant unassign a ticket");
+        }
+        if (ticket.getAssignedTo()==null){
+            throw new InvalidTicketStateException("This ticket is already unassigned");
+        }
+        String oldAssignedToEmail=ticket.getAssignedTo().getEmail();
+        ticket.setAssignedTo(null);
+
+        Ticket updatedTicket=ticketRepository.save(ticket);
+        createUnassignedHistory(updatedTicket,oldAssignedToEmail,curr_user);
+
+        return mapTicketToResponse(updatedTicket);
+    }
+    public void createUnassignedHistory(Ticket updatedTicket,String oldAssignedToEmail,User user){
+        TicketHistory ticketHistory=new TicketHistory();
+
+        ticketHistory.setTicket(updatedTicket);
+        ticketHistory.setChangedAt(LocalDateTime.now());
+        ticketHistory.setActionType(TicketHistoryActionType.UNASSIGNED);
+        ticketHistory.setOldAssignedToEmail(oldAssignedToEmail);
+        ticketHistory.setChangedBy(user);
+        ticketHistory.setNewAssignedToEmail(null);
+
+        ticketHistoryRepository.save(ticketHistory);
+    }
+    public DashboardSummaryResponse getDashboardSummary(Authentication authentication){
+        User user=getCurrentUser(authentication);
+        List<Ticket> tickets=getVisibleTicketsForStats(user);
+
+        DashboardStatsResponse statsResponse=new DashboardStatsResponse();
+        DashboardPriorityResponse priorityResponse=new DashboardPriorityResponse();
+        DashboardAssignmentResonse assignmentResponse=new DashboardAssignmentResonse();
+
+        statsResponse.setTotalTickets(tickets.size());
+        for (Ticket ticket:tickets){
+            if (ticket.getStatus()==TicketStatus.OPEN){
+                statsResponse.setOpenTickets(statsResponse.getOpenTickets()+1);
+            } else if (ticket.getStatus()==TicketStatus.IN_PROGRESS){
+                statsResponse.setInProgressTickets(statsResponse.getInProgressTickets()+1);
+            } else if (ticket.getStatus()==TicketStatus.RESOLVED){
+                statsResponse.setResolvedTickets(statsResponse.getResolvedTickets()+1);
+            }else {
+                statsResponse.setClosedTickets(statsResponse.getClosedTickets()+1);
+            }
+            if (ticket.getPriority() == TicketPriority.HIGH) {
+                priorityResponse.setHighPriorityTickets(priorityResponse.getHighPriorityTickets() + 1);
+            } else if (ticket.getPriority() == TicketPriority.MEDIUM) {
+                priorityResponse.setMediumPriorityTickets(priorityResponse.getMediumPriorityTickets() + 1);
+            } else if (ticket.getPriority() == TicketPriority.LOW) {
+                priorityResponse.setLowPriorityTickets(priorityResponse.getLowPriorityTickets() + 1);
+            }
+
+            if (ticket.getAssignedTo() != null) {
+                assignmentResponse.setAssignedTickets(assignmentResponse.getAssignedTickets() + 1);
+            } else {
+                assignmentResponse.setUnassignedTickets(assignmentResponse.getUnassignedTickets() + 1);
+            }
+        }
+        List<TicketResponse> recentTickets = getRecentTicketsForDashboard(user);
+        List<TicketResponse> recentlyUpdatedTickets = getRecentlyUpdatedTicketsForDashboard(user);
+
+        DashboardSummaryResponse response =new DashboardSummaryResponse();
+        response.setAssignmentDashboard(assignmentResponse);
+        response.setPriorityResponse(priorityResponse);
+        response.setStatsResponse(statsResponse);
+        response.setRecentTickets(recentTickets);
+        response.setRecentlyUpdatedTickets(recentlyUpdatedTickets);
+
+        List<AgentWorkloadResponse>agentWorkload=getAgenWorkload(user);
+        response.setAgentWorkload(agentWorkload);
+
+
+        return response;
+    }
+    private List<AgentWorkloadResponse> getAgenWorkload(User curr_user){
+        List<AgentWorkloadResponse> result=new ArrayList<>();
+        if (curr_user.getRole()==Role.CLIENT){
+            return result;
+        }
+        List<User>users=userRepository.findAll();
+        for(User user:users){
+            if (user.getRole()!=Role.AGENT){
+                continue;
+            }
+            if (curr_user.getRole()==Role.AGENT && !curr_user.getId().equals(user.getId())){
+                continue;
+            }
+            List<Ticket> assignedTickets=ticketRepository.findByAssignedTo(user);
+            AgentWorkloadResponse agentWorkload=new AgentWorkloadResponse();
+            agentWorkload.setAgentEmail(user.getEmail());
+            agentWorkload.setAgentId(user.getId());
+            agentWorkload.setAgentName(user.getFullName());
+            agentWorkload.setAssignedTickets(assignedTickets.size());
+
+            for (Ticket ticket:assignedTickets){
+                if(ticket.getStatus()==TicketStatus.OPEN){
+                    agentWorkload.setOpenedTickets(agentWorkload.getOpenedTickets()+1);
+                } else if (ticket.getStatus()==TicketStatus.IN_PROGRESS){
+                    agentWorkload.setInProgressTickets(agentWorkload.getInProgressTickets()+1);
+                } else if (ticket.getStatus()==TicketStatus.RESOLVED){
+                    agentWorkload.setResolvedTickets(agentWorkload.getResolvedTickets()+1);
+                } else if (ticket.getStatus() == TicketStatus.CLOSED) {
+                    agentWorkload.setClosedTickets(agentWorkload.getClosedTickets() + 1);}
+                if (ticket.getPriority() == TicketPriority.HIGH) {
+                    agentWorkload.setHighPriorityTickets(agentWorkload.getHighPriorityTickets() + 1);
+                }
+            }
+            result.add(agentWorkload);
+        }
+        return result;
+    }
+    private List<TicketResponse> getRecentTicketsForDashboard(User user){
+        List<Ticket> tickets;
+        if (user.getRole()==Role.ADMIN){
+            tickets=ticketRepository.findTop5ByOrderByCreatedAtDesc();
+        }
+        if (user.getRole()==Role.AGENT){
+            tickets=ticketRepository.findTop5ByAssignedToOrderByCreatedAtDesc(user);
+        }
+        else
+            tickets=ticketRepository.findTop5ByCreatedByOrderByCreatedAtDesc(user);
+        List<TicketResponse> responses=new ArrayList<>();
+        for (Ticket ticket:tickets){
+            responses.add(mapTicketToResponse(ticket));
+        }
+        return responses;
+    }
+    private List<TicketResponse> getRecentlyUpdatedTicketsForDashboard(User user) {
+        List<Ticket> tickets;
+        if (user.getRole() == Role.ADMIN) {
+            tickets = ticketRepository.findTop5ByOrderByUpdatedAtDesc();
+        } else if (user.getRole() == Role.AGENT) {
+            tickets = ticketRepository.findTop5ByAssignedToOrderByUpdatedAtDesc(user);
+        } else {
+            tickets = ticketRepository.findTop5ByCreatedByOrderByUpdatedAtDesc(user);
+        }
+        List<TicketResponse> responses = new ArrayList<>();
+        for (Ticket ticket : tickets) {
+            responses.add(mapTicketToResponse(ticket));
+        }
+
+        return responses;
+    }
+
 }

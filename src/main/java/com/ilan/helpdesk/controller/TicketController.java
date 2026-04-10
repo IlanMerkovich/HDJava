@@ -21,7 +21,7 @@ public class TicketController{
 
     @GetMapping
     @PreAuthorize("hasAnyRole('CLIENT','AGENT','ADMIN')")
-    public pagedTicketResponse getAllTickets(
+    public PagedTicketResponse getAllTickets(
             @RequestParam(required = false) TicketStatus status,
             @RequestParam(required = false) TicketPriority priority,
             @RequestParam(defaultValue = "0") int page,
@@ -35,13 +35,13 @@ public class TicketController{
 
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('CLIENT','ADMIN','AGENT')")
-    public ticketStatsResponse getTicketStats(Authentication authentication){
+    public TicketStatsResponse getTicketStats(Authentication authentication){
         return ticketService.getTicketStats(authentication);
     }
 
     @GetMapping("/{id}/history")
     @PreAuthorize("hasAnyRole('CLIENT','AGENT','ADMIN')")
-    public List<ticketHistoryResponse> getTicketHistory(@PathVariable long id,Authentication authentication){
+    public List<TicketHistoryResponse> getTicketHistory(@PathVariable long id, Authentication authentication){
         return ticketService.getTicketHistory(id,authentication);
     }
 
@@ -60,7 +60,7 @@ public class TicketController{
 
     @PostMapping //creating a new ticket
     @PreAuthorize("hasAnyRole('CLIENT','ADMIN')")
-    public TicketResponse createTicket(@Valid @RequestBody createTicketRequest request,
+    public TicketResponse createTicket(@Valid @RequestBody CreateTicketRequest request,
                                        Authentication authentication) /*this means that we take the json file and create and object. in addition, before we invoke
     this method we tell her to check all validation rules */ {
         return ticketService.createTicket(request,authentication);
@@ -73,22 +73,30 @@ public class TicketController{
 
     @PostMapping("/{id}/comments")
     @PreAuthorize("hasAnyRole('CLIENT', 'AGENT', 'ADMIN')")
-    public CommentResponse addCommentToTicket(@PathVariable long id,@Valid @RequestBody addCommentRequest request
+    public CommentResponse addCommentToTicket(@PathVariable long id,@Valid @RequestBody AddCommentRequest request
     ,Authentication authentication){
         return ticketService.addCommentToTicket(id,request,authentication);
     }
 
     @PatchMapping("/{id}/assign")
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public TicketResponse assignTicket(@PathVariable long id,@Valid @RequestBody assignTicketRequest request,Authentication authentication){
+    public TicketResponse assignTicket(@PathVariable long id, @Valid @RequestBody AssignTicketRequest request, Authentication authentication){
         return ticketService.assignTicket(id,request,authentication);
     }
 
     @PatchMapping("/{id}/reopen")
     @PreAuthorize("hasAnyRole('CLIENT','ADMIN')")
     public TicketResponse reopenTicket(@PathVariable long id,Authentication authentication){
-        return  ticketService.reopenTicket(id,authentication);
+        return ticketService.reopenTicket(id,authentication);
     }
+
+    @PatchMapping("/{id}/unassign")
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    public TicketResponse unassignTicket(@PathVariable long id,Authentication authentication){
+        return ticketService.unassignTicket(id,authentication);
+    }
+
+
 
 }
 

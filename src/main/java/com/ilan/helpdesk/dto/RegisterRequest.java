@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public class registerRequest {
+public class RegisterRequest {
     @NotBlank (message = "name must be provided")
     @Size (min = 2 , max = 100 ,message = "name must be between 2 and 100 chars")
     private String fullName;
@@ -15,8 +15,8 @@ public class registerRequest {
     @Size (min = 6,max = 100, message = "password must be between 6 and 100 chars")
     private String password;
 
-    public registerRequest(){};
-    public registerRequest(String fullName,String email,String password){
+    public RegisterRequest(){};
+    public RegisterRequest(String fullName, String email, String password){
         this.fullName=fullName;
         this.email=email;
         this.password=password;

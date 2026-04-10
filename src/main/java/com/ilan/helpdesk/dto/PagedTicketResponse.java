@@ -2,7 +2,7 @@ package com.ilan.helpdesk.dto;
 
 import java.util.List;
 
-public class pagedTicketResponse {
+public class PagedTicketResponse {
     private List<TicketResponse>content;
     private int page;
     private int size;
@@ -10,7 +10,7 @@ public class pagedTicketResponse {
     private int totalPages;
     private boolean first;
     private boolean last;
-    public pagedTicketResponse(){}
+    public PagedTicketResponse(){}
 
     public int getPage() {
         return page;

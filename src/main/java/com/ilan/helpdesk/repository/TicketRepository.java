@@ -27,6 +27,13 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     Page<Ticket> findByStatus(TicketStatus status, Pageable pageable);
     Page<Ticket> findByPriority(TicketPriority priority, Pageable pageable);
     Page<Ticket> findByStatusAndPriority(TicketStatus status, TicketPriority priority, Pageable pageable);
+    List<Ticket> findTop5ByOrderByCreatedAtDesc();
+    List<Ticket> findTop5ByOrderByUpdatedAtDesc();
+    List<Ticket> findTop5ByCreatedByOrderByCreatedAtDesc(User user);
+    List<Ticket> findTop5ByCreatedByOrderByUpdatedAtDesc(User user);
+    List<Ticket> findTop5ByAssignedToOrderByCreatedAtDesc(User user);
+    List<Ticket> findTop5ByAssignedToOrderByUpdatedAtDesc(User user);
+
     Page<Ticket> findAll(Pageable pageable);
     @Query("""
 SELECT t FROM Ticket t
