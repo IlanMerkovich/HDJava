@@ -3,6 +3,7 @@ package com.ilan.helpdesk.service;
 
 import ch.qos.logback.core.util.StringUtil;
 import com.ilan.helpdesk.dto.TicketAttachmentResponse;
+import com.ilan.helpdesk.enums.NotificationType;
 import com.ilan.helpdesk.exception.InvalidAttachmentException;
 import com.ilan.helpdesk.exception.ResourceNotFoundException;
 import com.ilan.helpdesk.model.Ticket;
@@ -37,10 +38,12 @@ public class TicketAttachmentService {
     private final TicketAttachmentRepository ticketAttachmentRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
     private final Path uploadPath;
     private final TicketService ticketService;
     private static final Set<String>ALLOWED_EXTENSIONS=Set.of(".png",".jpg",".jpeg","pdf",".txt");
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/png", "image/jpeg", "application/pdf", "text/plain");
+
     private void validateAttachmentFile(MultipartFile file){
         if (file==null || file.isEmpty()){
             throw new InvalidAttachmentException("file is empty");
@@ -67,12 +70,13 @@ public class TicketAttachmentService {
         }
     }
     public TicketAttachmentService(TicketAttachmentRepository ticketAttachmentRepository, TicketRepository ticketRepository,
-                                   TicketService ticketService, UserRepository userRepository,
+                                   TicketService ticketService, UserRepository userRepository,NotificationService notificationService,
                                    @Value("${file.upload-dir}") String uploadDir) throws IOException{
         this.ticketAttachmentRepository=ticketAttachmentRepository;
         this.ticketRepository=ticketRepository;
         this.ticketService=ticketService;
         this.userRepository=userRepository;
+        this.notificationService=notificationService;
         this.uploadPath= Paths.get(uploadDir).toAbsolutePath().normalize();
         Files.createDirectories(this.uploadPath);
     }
@@ -106,6 +110,7 @@ public class TicketAttachmentService {
         attachment.setStoredFileName(storedFileName);
 
         TicketAttachment saved=ticketAttachmentRepository.save(attachment);
+        createAttachmentNotification(ticket,user);
         return mapToResponse(saved);
     }
     @Transactional(readOnly = true)
@@ -175,6 +180,16 @@ public class TicketAttachmentService {
         Path filePath=uploadPath.resolve(attachment.getStoredFileName()).normalize();
         ticketAttachmentRepository.delete(attachment);
         Files.deleteIfExists(filePath);
+    }
+    private void createAttachmentNotification(Ticket ticket,User uploader){
+        if (ticket.getCreatedBy()!=null && !ticket.getCreatedBy().getId().equals(uploader.getId())){
+            notificationService.createNotification(ticket.getCreatedBy(),"a new attachment was added to ticket: "+ticket.getTitle()
+                    , NotificationType.ATTACHMENT_ADDED,ticket.getId());
+        }
+        if (ticket.getAssignedTo()!=null && !ticket.getAssignedTo().getId().equals(uploader.getId())){
+            notificationService.createNotification(ticket.getAssignedTo(),"a new attachment was added to ticket: "+ticket.getTitle()
+                    ,NotificationType.ATTACHMENT_ADDED,ticket.getId());
+        }
     }
 
 
