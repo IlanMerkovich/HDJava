@@ -317,7 +317,7 @@ public class TicketService {
         }
         return false;
     }
-    private void validateTicketAccess(User user,Ticket ticket){
+    public void validateTicketAccess(User user,Ticket ticket){
         if (!canAccessTicket(user,ticket)){
             throw new ResourceNotFoundException("Ticket with id "+ticket.getId()+" not found");
         }
