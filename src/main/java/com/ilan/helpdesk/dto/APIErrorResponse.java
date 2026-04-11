@@ -3,15 +3,15 @@ package com.ilan.helpdesk.dto;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-public class ApiErrorResponse {
+public class APIErrorResponse {
     private int status;
     private String message;
     private LocalDateTime timestamp;
     private Map<String, String> errors;
 
-    public ApiErrorResponse() {
+    public APIErrorResponse() {
     }
-    public ApiErrorResponse(int status, String message, LocalDateTime timestamp, Map<String, String> errors) {
+    public APIErrorResponse(int status, String message, LocalDateTime timestamp, Map<String, String> errors) {
         this.status = status;
         this.message = message;
         this.timestamp = timestamp;
