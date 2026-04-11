@@ -1,5 +1,7 @@
 package com.ilan.helpdesk.dto;
 
+import com.ilan.helpdesk.enums.AttachmentFileCategory;
+
 import java.time.LocalDateTime;
 
 public class TicketAttachmentResponse {
@@ -9,7 +11,28 @@ public class TicketAttachmentResponse {
     private long size;
     private LocalDateTime createdAt;
     private String uploadedByEmail;
+    private boolean previewable;
+    private AttachmentFileCategory attachmentFileCategory;
+
+
+
     public TicketAttachmentResponse(){};
+
+    public AttachmentFileCategory getAttachmentFileCategory() {
+        return attachmentFileCategory;
+    }
+
+    public boolean isPreviewable() {
+        return previewable;
+    }
+
+    public void setAttachmentFileCategory(AttachmentFileCategory attachmentFileCategory) {
+        this.attachmentFileCategory = attachmentFileCategory;
+    }
+
+    public void setPreviewable(boolean previewable) {
+        this.previewable = previewable;
+    }
 
     public String getContentType() {
         return contentType;

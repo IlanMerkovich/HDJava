@@ -3,7 +3,9 @@ package com.ilan.helpdesk.service;
 
 import ch.qos.logback.core.util.StringUtil;
 import com.ilan.helpdesk.dto.TicketAttachmentResponse;
+import com.ilan.helpdesk.enums.AttachmentFileCategory;
 import com.ilan.helpdesk.enums.NotificationType;
+import com.ilan.helpdesk.exception.AttachmentPreviewNotAllowedException;
 import com.ilan.helpdesk.exception.InvalidAttachmentException;
 import com.ilan.helpdesk.exception.ResourceNotFoundException;
 import com.ilan.helpdesk.model.Ticket;
@@ -161,6 +163,8 @@ public class TicketAttachmentService {
         response.setSize(ticketAttachment.getSize());
         response.setCreatedAt(ticketAttachment.getCreatedAt());
         response.setOriginalFileName(ticketAttachment.getOriginalFileName());
+        response.setAttachmentFileCategory(resolveFileCategory(ticketAttachment.getContentType()));
+        response.setPreviewable(isPreviewable(ticketAttachment.getContentType()));
 
         if (ticketAttachment.getCreatedBy()!=null){
             response.setUploadedByEmail(ticketAttachment.getCreatedBy().getEmail());
@@ -190,6 +194,50 @@ public class TicketAttachmentService {
             notificationService.createNotification(ticket.getAssignedTo(),"a new attachment was added to ticket: "+ticket.getTitle()
                     ,NotificationType.ATTACHMENT_ADDED,ticket.getId());
         }
+    }
+    private AttachmentFileCategory resolveFileCategory(String contentType){
+        if (contentType==null){
+            return AttachmentFileCategory.OTHER;
+        }
+        String normalized=contentType.toLowerCase();
+        if (normalized.equals("image/png")||normalized.equals("image/jpeg")){
+            return AttachmentFileCategory.IMAGE;
+        }
+        if (normalized.equals("application/pdf")){
+            return AttachmentFileCategory.PDF;
+        }
+        if (normalized.equals("text/plain")){
+            return AttachmentFileCategory.TEXT;
+        }
+        return AttachmentFileCategory.OTHER;
+    };
+    private boolean isPreviewable(String contentType){
+        AttachmentFileCategory category=resolveFileCategory(contentType);
+        return category==AttachmentFileCategory.TEXT || category==AttachmentFileCategory.IMAGE ||
+                category==AttachmentFileCategory.PDF;
+    }
+    @Transactional(readOnly = true)
+    public Resource previewAttachment(Long attachmentId, Authentication authentication) throws MalformedURLException {
+        TicketAttachment attachment = ticketAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "attachment with id: " + attachmentId + " not found"
+                ));
+
+        User user = getCurrentUser(authentication);
+        ticketService.validateTicketAccess(user, attachment.getTicket());
+
+        if (!isPreviewable(attachment.getContentType())) {
+            throw new AttachmentPreviewNotAllowedException("This file cannot be previewed");
+        }
+
+        Path filePath = uploadPath.resolve(attachment.getStoredFileName()).normalize();
+        Resource resource = new UrlResource(filePath.toUri());
+
+        if (!resource.exists()) {
+            throw new ResourceNotFoundException("File not found on the disk");
+        }
+
+        return resource;
     }
 
 

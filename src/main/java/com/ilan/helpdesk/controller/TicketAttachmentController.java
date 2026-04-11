@@ -56,7 +56,19 @@ public class TicketAttachmentController {
     public void deleteAttachment(@PathVariable Long attachmentId, Authentication authentication) throws Exception {
         attachmentService.DeleteAttachment(attachmentId, authentication);
     }
+    @GetMapping("/api/attachments/{attachmentId}/preview")
+    @PreAuthorize("hasAnyRole('CLIENT','AGENT','ADMIN')")
+    public ResponseEntity<Resource> previewAttachment(@PathVariable Long attachmentId,
+                                                      Authentication authentication) throws Exception {
+        Resource resource = attachmentService.previewAttachment(attachmentId, authentication);
+        TicketAttachment attachment = attachmentService.getAttachmentById(attachmentId);
 
-
-
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        attachment.getContentType() != null ? attachment.getContentType() : "application/octet-stream"
+                ))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + attachment.getOriginalFileName() + "\"")
+                .body(resource);
+    }
 }

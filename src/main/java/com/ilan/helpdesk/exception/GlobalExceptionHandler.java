@@ -110,4 +110,14 @@ public class GlobalExceptionHandler {
                 null);
         return new ResponseEntity<>(errorResponse,HttpStatus.BAD_REQUEST);
     }
+
+    @ExceptionHandler(AttachmentPreviewNotAllowedException.class)
+    public ResponseEntity<ApiErrorResponse>handleAttachmentPreviewNotAllowed(AttachmentPreviewNotAllowedException ex){
+        ApiErrorResponse errorResponse=new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage(),
+                LocalDateTime.now(),
+                null);
+        return new ResponseEntity<>(errorResponse,HttpStatus.BAD_REQUEST);
+    }
 }
