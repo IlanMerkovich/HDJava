@@ -100,5 +100,49 @@ public class AuthControllerIntegrationTest {
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Invalid email or password"));
+
+
+    }
+    @Test
+    void register_shouldFailWhenEmailIsInvalid() throws Exception {
+        RegisterRequest request = new RegisterRequest();
+        request.setFullName("Test User");
+        request.setEmail("not-an-email");
+        request.setPassword("123456");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors.email").exists());
+    }
+
+    @Test
+    void login_shouldFailWhenEmailIsBlank() throws Exception {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("");
+        request.setPassword("123456");
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors.email").exists());
+    }
+
+    @Test
+    void login_shouldFailWhenEmailFormatIsInvalid() throws Exception {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("abc");
+        request.setPassword("123456");
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors.email").exists());
     }
 }
