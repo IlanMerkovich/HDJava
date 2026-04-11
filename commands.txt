@@ -1,0 +1,13 @@
+קיצור דרך לזכור
+שינוי קוד / pom / Dockerfile
+docker compose up -d --build
+שינוי compose בלבד
+docker compose down
+docker compose up -d
+reset מלא
+docker compose down -v
+docker compose up -d --build
+לוגים
+docker compose logs -f app
+SQL
+docker compose exec db psql -U postgres -d helpdesk_db

@@ -1,38 +1,26 @@
-HELP.md
+# Maven / Java build
 target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+*.class
 
-# Ignore Postgres backups and SQL dumps
-*.sql
-*.dump
-*.backup
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
+# IntelliJ IDEA
+.idea/
 *.iml
-*.ipr
+out/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+# OS files
+.DS_Store
+Thumbs.db
 
-### VS Code ###
-.vscode/
+# Logs
+*.log
+
+# Local uploads / generated files
+uploads/
+
+# Environment / secrets
+.env
+
+# Docker files - ignore only if you do NOT want them in GitHub
+Dockerfile
+docker-compose.yml
+.dockerignore
