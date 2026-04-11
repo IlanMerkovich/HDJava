@@ -2,6 +2,10 @@ package controller;
 
 import com.ilan.helpdesk.dto.LoginRequest;
 import com.ilan.helpdesk.dto.RegisterRequest;
+import com.ilan.helpdesk.repository.CommentRepository;
+import com.ilan.helpdesk.repository.NotificationRepository;
+import com.ilan.helpdesk.repository.TicketAttachmentRepository;
+import com.ilan.helpdesk.repository.TicketHistoryRepository;
 import com.ilan.helpdesk.repository.TicketRepository;
 import com.ilan.helpdesk.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,13 +39,27 @@ public class TicketValidationIntegrationTest {
     @Autowired
     private TicketRepository ticketRepository;
 
+    @Autowired
+    private CommentRepository commentRepository;
+
+    @Autowired
+    private TicketHistoryRepository ticketHistoryRepository;
+
+    @Autowired
+    private TicketAttachmentRepository ticketAttachmentRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
     @BeforeEach
     void clearDatabase() {
+        commentRepository.deleteAll();
+        ticketAttachmentRepository.deleteAll();
+        ticketHistoryRepository.deleteAll();
+        notificationRepository.deleteAll();
         ticketRepository.deleteAll();
         userRepository.deleteAll();
     }
-
-
 
     private String registerAndLoginClient() throws Exception {
         RegisterRequest registerRequest = new RegisterRequest();
