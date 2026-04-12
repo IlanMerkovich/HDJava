@@ -33,37 +33,21 @@ public class TicketService {
     private final TicketHistoryRepository ticketHistoryRepository;
     private final NotificationService notificationService;
 
+    public TicketService(TicketRepository ticketRepository, CommentRepository commentRepository, UserRepository userRepository,
+                         TicketHistoryRepository ticketHistoryRepository,NotificationService notificationService) {
+        this.ticketRepository = ticketRepository;
+        this.commentRepository = commentRepository;
+        this.userRepository=userRepository;
+        this.ticketHistoryRepository=ticketHistoryRepository;
+        this.notificationService=notificationService;
+    }
     public PagedTicketResponse getAllTicketsPaged(TicketStatus status, TicketPriority priority, int page, int size,
                                                   String sortBy, String direction, Authentication authentication, String query) {
         User currentUser = getCurrentUser(authentication);
 
-        if (page < 0) {
-            page = 0;
-        }
-
-        if (size <= 0) {
-            size = 10;
-        }
-
-        if (size > 100) {
-            size = 100;
-        }
-
-        List<String> allowedSortFields = List.of("id", "title", "status", "priority","createdAt","updatedAt");
-        if (!allowedSortFields.contains(sortBy)) {
-            sortBy = "id";
-        }
-
-        Sort sort;
-        if (direction.equalsIgnoreCase("desc")) {
-            sort = Sort.by(sortBy).descending();
-        } else {
-            sort = Sort.by(sortBy).ascending();
-        }
-
-        Pageable pageable = PageRequest.of(page, size, sort);
-
+        Pageable pageable = buildPageable(page,size,sortBy,direction);
         Page<Ticket> ticketPage;
+
         if (currentUser.getRole()== Role.CLIENT){
             ticketPage=ticketRepository.searchClientTickets(currentUser,status,priority,query,pageable);
         } else if (currentUser.getRole()==Role.AGENT){
@@ -73,10 +57,7 @@ public class TicketService {
             ticketPage=ticketRepository.searchAdminTickets(status,priority,query,pageable);
         }
 
-        List<TicketResponse> responses = new ArrayList<>();
-        for (Ticket ticket : ticketPage.getContent()) {
-            responses.add(mapTicketToResponse(ticket));
-        }
+        List<TicketResponse> responses = mapTicketsToResponses(ticketPage.getContent());
 
         PagedTicketResponse response = new PagedTicketResponse();
         response.setContent(responses);
@@ -90,7 +71,7 @@ public class TicketService {
         return response;
     }
     public TicketResponse assignTicket(long ticketId, AssignTicketRequest request, Authentication authentication) {
-        Ticket ticket = findTicketEntityById(ticketId);
+        Ticket ticket = getTicketAndValidate(ticketId,authentication);
         User changedBy = getCurrentUser(authentication);
         User agent = userRepository.findById(request.getAgentId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -114,71 +95,8 @@ public class TicketService {
 
         return mapTicketToResponse(updatedTicket);
     }
-    public TicketService(TicketRepository ticketRepository, CommentRepository commentRepository, UserRepository userRepository,
-                         TicketHistoryRepository ticketHistoryRepository,NotificationService notificationService) {
-        this.ticketRepository = ticketRepository;
-        this.commentRepository = commentRepository;
-        this.userRepository=userRepository;
-        this.ticketHistoryRepository=ticketHistoryRepository;
-        this.notificationService=notificationService;
-    }
-    /*
-    public List<TicketResponse> getAllTickets(TicketStatus status, TicketPriority priority, Authentication authentication) {
-        String email = authentication.getName();
-
-        User currentUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        List<Ticket> tickets;
-
-        if (currentUser.getRole() == Role.CLIENT) {
-            if (status != null && priority != null) {
-                tickets = ticketRepository.findByCreatedByAndStatusAndPriority(currentUser, status, priority);
-            } else if (status != null) {
-                tickets = ticketRepository.findByCreatedByAndStatus(currentUser, status);
-            } else if (priority != null) {
-                tickets = ticketRepository.findByCreatedByAndPriority(currentUser, priority);
-            } else {
-                tickets = ticketRepository.findByCreatedBy(currentUser);
-            }
-        }
-        else if (currentUser.getRole() == Role.AGENT) {
-            if (status != null && priority != null) {
-                tickets = ticketRepository.findByAssignedToAndStatusAndPriority(currentUser, status, priority);
-            } else if (status != null) {
-                tickets = ticketRepository.findByAssignedToAndStatus(currentUser, status);
-            } else if (priority != null) {
-                tickets = ticketRepository.findByAssignedToAndPriority(currentUser, priority);
-            } else {
-                tickets = ticketRepository.findByAssignedTo(currentUser);
-            }
-        }
-        else {
-            if (status != null && priority != null) {
-                tickets = ticketRepository.findByStatusAndPriority(status, priority);
-            } else if (status != null) {
-                tickets = ticketRepository.findByStatus(status);
-            } else if (priority != null) {
-                tickets = ticketRepository.findByPriority(priority);
-            } else {
-                tickets = ticketRepository.findAll();
-            }
-        }
-
-        List<TicketResponse> responses = new ArrayList<>();
-        for (Ticket ticket : tickets) {
-            responses.add(mapTicketToResponse(ticket));
-        }
-
-        return responses;
-    }
-     */
     public TicketResponse getTicketById(long id,Authentication authentication) {
-        Ticket ticket = findTicketEntityById(id);
-        User user=getCurrentUser(authentication);
-        validateTicketAccess(user,ticket);
-
-        return mapTicketToResponse(ticket);
+        return mapTicketToResponse(getTicketAndValidate(id,authentication));
     }
     public TicketResponse createTicket(CreateTicketRequest request, Authentication authentication) {
         String email=authentication.getName();
@@ -195,9 +113,8 @@ public class TicketService {
         return mapTicketToResponse(savedTicket);
     }
     public TicketResponse updateTicketStatus(Long id, UpdateTicketStatusRequest request,Authentication authentication) {
-        Ticket ticket = findTicketEntityById(id);
+        Ticket ticket=getTicketAndValidate(id,authentication);
         User user=getCurrentUser(authentication);
-        validateTicketAccess(user,ticket);
 
         TicketStatus oldStatus = ticket.getStatus();
         TicketStatus newStatus = request.getStatus();
@@ -225,23 +142,13 @@ public class TicketService {
         return mapTicketToResponse(updatedTicket);
     }
     public List<CommentResponse> getCommentsByTicketId(long ticketId,Authentication authentication) {
-        Ticket ticket=findTicketEntityById(ticketId);
-        User user=getCurrentUser(authentication);
-        validateTicketAccess(user, ticket);
-
+        Ticket ticket=getTicketAndValidate(ticketId,authentication);
         List<Comment> comments = commentRepository.findByTicketId(ticketId);
-        List<CommentResponse> responses = new ArrayList<>();
-
-        for (Comment comment : comments) {
-            responses.add(mapCommentToResponse(comment));
-        }
-
-        return responses;
+        return mapCommentsToResponses(comments);
     }
     public CommentResponse addCommentToTicket(Long ticketId, AddCommentRequest request, Authentication authentication) {
-        Ticket ticket = findTicketEntityById(ticketId);
+        Ticket ticket=getTicketAndValidate(ticketId,authentication);
         User user=getCurrentUser(authentication);
-        validateTicketAccess(user,ticket);
 
         Comment comment = new Comment();
         comment.setContent(request.getContent());
@@ -261,6 +168,118 @@ public class TicketService {
 
         return mapCommentToResponse(savedComment);
     }
+    public void validateTicketAccess(User user,Ticket ticket){
+        if (!canAccessTicket(user,ticket)){
+            throw new ResourceNotFoundException("Ticket with id "+ticket.getId()+" not found");
+        }
+    }
+    public List<TicketHistoryResponse> getTicketHistory(long ticketId, Authentication authentication){
+        Ticket ticket=getTicketAndValidate(ticketId,authentication);
+
+        List<TicketHistory> historyList= ticketHistoryRepository.findByTicketIdOrderByChangedAtAsc(ticketId);
+        List<TicketHistoryResponse> responses=mapHistoryToResponses(historyList);
+        return responses;
+    }
+    public TicketStatsResponse getTicketStats(Authentication authentication){
+        User user=getCurrentUser(authentication);
+        DashboardCountsProjection counts=getDashboardCounts(user);
+
+        TicketStatsResponse response=new TicketStatsResponse();
+
+        response.setAssignedTickets(counts.getAssignedTickets());
+        response.setUnassignedTickets(counts.getUnassignedTickets());
+        response.setClosedTickets(counts.getClosedTickets());
+        response.setOpenTickets(counts.getOpenTickets());
+        response.setResolvedTickets(counts.getResolvedTickets());
+        response.setInProgressTickets(counts.getInProgressTickets());
+        response.setHighPriorityTickets(counts.getHighPriorityTickets());
+        response.setMediumPriorityTickets(counts.getMediumPriorityTickets());
+        response.setLowPriorityTickets(counts.getLowPriorityTickets());
+        response.setTotalTickets(counts.getTotalTickets());
+
+        return response;
+    }
+    public TicketResponse reopenTicket(long id,Authentication authentication){
+        Ticket ticket = findTicketEntityById(id);
+        User user=getCurrentUser(authentication);
+
+        if (user.getRole()!=Role.ADMIN && user.getRole()!=Role.CLIENT){
+            throw new InvalidUserRoleException("Only client or admin can reopen tickets");
+        }
+        if (user.getRole()==Role.CLIENT){
+            validateTicketAccess(user,ticket);
+        }
+        if (ticket.getStatus()!=TicketStatus.CLOSED){
+            throw new InvalidTicketStateException("Only closed tickets can be reopened");
+        }
+
+        TicketStatus oldStatus=ticket.getStatus();
+        ticket.setStatus(TicketStatus.OPEN);
+
+        Ticket updatedTicket=ticketRepository.save(ticket);
+        if (updatedTicket.getAssignedTo()!=null){
+            notificationService.createNotification(updatedTicket.getAssignedTo(),"a ticket assigned to you reopened: "+
+                    updatedTicket.getTitle(),NotificationType.TICKET_REOPENED,updatedTicket.getId());
+        }
+
+        reopenHistoryChange(updatedTicket,oldStatus,TicketStatus.OPEN,user);
+
+        return mapTicketToResponse(updatedTicket);
+    }
+    public TicketResponse unassignTicket(long id,Authentication authentication){
+        Ticket ticket=findTicketEntityById(id);
+        User curr_user=getCurrentUser(authentication);
+
+        if (curr_user.getRole()!=Role.ADMIN){
+            throw new InvalidUserRoleException("Non admin user cant unassign a ticket");
+        }
+        if (ticket.getAssignedTo()==null){
+            throw new InvalidTicketStateException("This ticket is already unassigned");
+        }
+        String oldAssignedToEmail=ticket.getAssignedTo().getEmail();
+        ticket.setAssignedTo(null);
+
+        Ticket updatedTicket=ticketRepository.save(ticket);
+        createUnassignedHistory(updatedTicket,oldAssignedToEmail,curr_user);
+
+        return mapTicketToResponse(updatedTicket);
+    }
+    public DashboardSummaryResponse getDashboardSummary(Authentication authentication){
+        User user=getCurrentUser(authentication);
+        DashboardCountsProjection counts=getDashboardCounts(user);
+
+        DashboardStatsResponse stats=new DashboardStatsResponse();
+        stats.setOpenTickets(counts.getOpenTickets());
+        stats.setClosedTickets(counts.getClosedTickets());
+        stats.setInProgressTickets(counts.getInProgressTickets());
+        stats.setResolvedTickets(counts.getResolvedTickets());
+        stats.setTotalTickets(counts.getTotalTickets());
+
+        DashboardAssignmentResponse assignments=new DashboardAssignmentResponse();
+        assignments.setAssignedTickets(counts.getAssignedTickets());
+        assignments.setUnassignedTickets(counts.getUnassignedTickets());
+
+        DashboardPriorityResponse prioritys=new DashboardPriorityResponse();
+        prioritys.setHighPriorityTickets(counts.getHighPriorityTickets());
+        prioritys.setMediumPriorityTickets(counts.getMediumPriorityTickets());
+        prioritys.setLowPriorityTickets(counts.getLowPriorityTickets());
+
+        List<TicketResponse> recentTickets=getRecentTicketsForDashboard(user);
+        List<TicketResponse> recentlyUpdatedTickets=getRecentlyUpdatedTicketsForDashboard(user);
+        List<AgentWorkloadResponse> agentWorkload=getAgenWorkload(user);
+
+        DashboardSummaryResponse response=new DashboardSummaryResponse();
+        response.setAgentWorkload(agentWorkload);
+        response.setRecentTickets(recentTickets);
+        response.setRecentlyUpdatedTickets(recentlyUpdatedTickets);
+        response.setStatsResponse(stats);
+        response.setPriorityResponse(prioritys);
+        response.setAssignmentDashboard(assignments);
+
+        return response;
+    }
+
+/* helper methods*/
     private Ticket findTicketEntityById(Long id) {
         return ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket with id " + id + " not found"));
@@ -317,10 +336,45 @@ public class TicketService {
         }
         return false;
     }
-    public void validateTicketAccess(User user,Ticket ticket){
-        if (!canAccessTicket(user,ticket)){
-            throw new ResourceNotFoundException("Ticket with id "+ticket.getId()+" not found");
+    private void createUnassignedHistory(Ticket updatedTicket,String oldAssignedToEmail,User user){
+        TicketHistory ticketHistory=new TicketHistory();
+
+        ticketHistory.setTicket(updatedTicket);
+        ticketHistory.setChangedAt(LocalDateTime.now());
+        ticketHistory.setActionType(TicketHistoryActionType.UNASSIGNED);
+        ticketHistory.setOldAssignedToEmail(oldAssignedToEmail);
+        ticketHistory.setChangedBy(user);
+        ticketHistory.setNewAssignedToEmail(null);
+
+        ticketHistoryRepository.save(ticketHistory);
+    }
+    private void reopenHistoryChange(Ticket ticket, TicketStatus oldStatus, TicketStatus newStatus, User changedBy){
+        TicketHistory ticketHistory=new TicketHistory();
+
+        ticketHistory.setTicket(ticket);
+        ticketHistory.setActionType(TicketHistoryActionType.REOPENED);
+        ticketHistory.setChangedBy(changedBy);
+        ticketHistory.setOldStatus(oldStatus);
+        ticketHistory.setNewStatus(newStatus);
+        ticketHistory.setChangedAt(LocalDateTime.now());
+        ticketHistoryRepository.save(ticketHistory);
+    }
+    private TicketHistoryResponse mapHistoryToResponse(TicketHistory history) {
+        TicketHistoryResponse response = new TicketHistoryResponse();
+        response.setId(history.getId());
+        response.setActionType(history.getActionType());
+        response.setOldStatus(history.getOldStatus());
+        response.setNewStatus(history.getNewStatus());
+        response.setOldAssignedToEmail(history.getOldAssignedToEmail());
+        response.setNewAssignedToEmail(history.getNewAssignedToEmail());
+        response.setChangedAt(history.getChangedAt());
+
+        if (history.getChangedBy() != null) {
+            response.setChangedByEmail(history.getChangedBy().getEmail());
+            response.setChangedByFullName(history.getChangedBy().getFullName());
         }
+
+        return response;
     }
     private void createStatusHistory(Ticket ticket, TicketStatus oldStatus, TicketStatus newStatus, User changedBy) {
         TicketHistory history = new TicketHistory();
@@ -343,168 +397,6 @@ public class TicketService {
         history.setChangedAt(LocalDateTime.now());
 
         ticketHistoryRepository.save(history);
-    }
-    public List<TicketHistoryResponse> getTicketHistory(long ticketId, Authentication authentication){
-        Ticket ticket=findTicketEntityById(ticketId);
-        User user=getCurrentUser(authentication);
-        validateTicketAccess(user,ticket);
-
-        List<TicketHistory> historyList= ticketHistoryRepository.findByTicketIdOrderByChangedAtAsc(ticketId);
-        List<TicketHistoryResponse> responses=new ArrayList<>();
-
-        for (TicketHistory ticketHistory:historyList){
-            responses.add(mapHistoryToResponse(ticketHistory));
-        }
-        return responses;
-    }
-    private TicketHistoryResponse mapHistoryToResponse(TicketHistory history) {
-        TicketHistoryResponse response = new TicketHistoryResponse();
-        response.setId(history.getId());
-        response.setActionType(history.getActionType());
-        response.setOldStatus(history.getOldStatus());
-        response.setNewStatus(history.getNewStatus());
-        response.setOldAssignedToEmail(history.getOldAssignedToEmail());
-        response.setNewAssignedToEmail(history.getNewAssignedToEmail());
-        response.setChangedAt(history.getChangedAt());
-
-        if (history.getChangedBy() != null) {
-            response.setChangedByEmail(history.getChangedBy().getEmail());
-            response.setChangedByFullName(history.getChangedBy().getFullName());
-        }
-
-        return response;
-    }
-    public TicketStatsResponse getTicketStats(Authentication authentication){
-        User user=getCurrentUser(authentication);
-        DashboardCountsProjection counts=getDashboardCounts(user);
-
-        TicketStatsResponse response=new TicketStatsResponse();
-
-        response.setAssignedTickets(counts.getAssignedTickets());
-        response.setUnassignedTickets(counts.getUnassignedTickets());
-        response.setClosedTickets(counts.getClosedTickets());
-        response.setOpenTickets(counts.getOpenTickets());
-        response.setResolvedTickets(counts.getResolvedTickets());
-        response.setInProgressTickets(counts.getInProgressTickets());
-        response.setHighPriorityTickets(counts.getHighPriorityTickets());
-        response.setMediumPriorityTickets(counts.getMediumPriorityTickets());
-        response.setLowPriorityTickets(counts.getLowPriorityTickets());
-        response.setTotalTickets(counts.getTotalTickets());
-
-        return response;
-    }
-    /*private List<Ticket> getVisibleTicketsForStats(User user){
-        if (user.getRole()==Role.ADMIN){
-            return ticketRepository.findAll();
-        }
-        if (user.getRole()==Role.AGENT){
-            return ticketRepository.findByAssignedTo(user);
-        }
-        else{
-            return ticketRepository.findByCreatedBy(user);
-        }
-    }*/
-    public TicketResponse reopenTicket(long id,Authentication authentication){
-        Ticket ticket = findTicketEntityById(id);
-        User user=getCurrentUser(authentication);
-
-        if (user.getRole()!=Role.ADMIN && user.getRole()!=Role.CLIENT){
-            throw new InvalidUserRoleException("Only client or admin can reopen tickets");
-        }
-        if (user.getRole()==Role.CLIENT){
-            validateTicketAccess(user,ticket);
-        }
-        if (ticket.getStatus()!=TicketStatus.CLOSED){
-            throw new InvalidTicketStateException("Only closed tickets can be reopened");
-        }
-
-        TicketStatus oldStatus=ticket.getStatus();
-        ticket.setStatus(TicketStatus.OPEN);
-
-        Ticket updatedTicket=ticketRepository.save(ticket);
-        if (updatedTicket.getAssignedTo()!=null){
-            notificationService.createNotification(updatedTicket.getAssignedTo(),"a ticket assigned to you reopened: "+
-                    updatedTicket.getTitle(),NotificationType.TICKET_REOPENED,updatedTicket.getId());
-        }
-
-        reopenHistoryChange(updatedTicket,oldStatus,TicketStatus.OPEN,user);
-
-        return mapTicketToResponse(updatedTicket);
-    }
-    private void reopenHistoryChange(Ticket ticket, TicketStatus oldStatus, TicketStatus newStatus, User changedBy){
-        TicketHistory ticketHistory=new TicketHistory();
-
-        ticketHistory.setTicket(ticket);
-        ticketHistory.setActionType(TicketHistoryActionType.REOPENED);
-        ticketHistory.setChangedBy(changedBy);
-        ticketHistory.setOldStatus(oldStatus);
-        ticketHistory.setNewStatus(newStatus);
-        ticketHistory.setChangedAt(LocalDateTime.now());
-        ticketHistoryRepository.save(ticketHistory);
-    }
-    public TicketResponse unassignTicket(long id,Authentication authentication){
-        Ticket ticket=findTicketEntityById(id);
-        User curr_user=getCurrentUser(authentication);
-
-        if (curr_user.getRole()!=Role.ADMIN){
-            throw new InvalidUserRoleException("Non admin user cant unassign a ticket");
-        }
-        if (ticket.getAssignedTo()==null){
-            throw new InvalidTicketStateException("This ticket is already unassigned");
-        }
-        String oldAssignedToEmail=ticket.getAssignedTo().getEmail();
-        ticket.setAssignedTo(null);
-
-        Ticket updatedTicket=ticketRepository.save(ticket);
-        createUnassignedHistory(updatedTicket,oldAssignedToEmail,curr_user);
-
-        return mapTicketToResponse(updatedTicket);
-    }
-    public void createUnassignedHistory(Ticket updatedTicket,String oldAssignedToEmail,User user){
-        TicketHistory ticketHistory=new TicketHistory();
-
-        ticketHistory.setTicket(updatedTicket);
-        ticketHistory.setChangedAt(LocalDateTime.now());
-        ticketHistory.setActionType(TicketHistoryActionType.UNASSIGNED);
-        ticketHistory.setOldAssignedToEmail(oldAssignedToEmail);
-        ticketHistory.setChangedBy(user);
-        ticketHistory.setNewAssignedToEmail(null);
-
-        ticketHistoryRepository.save(ticketHistory);
-    }
-    public DashboardSummaryResponse getDashboardSummary(Authentication authentication){
-        User user=getCurrentUser(authentication);
-        DashboardCountsProjection counts=getDashboardCounts(user);
-
-        DashboardStatsResponse stats=new DashboardStatsResponse();
-        stats.setOpenTickets(counts.getOpenTickets());
-        stats.setClosedTickets(counts.getClosedTickets());
-        stats.setInProgressTickets(counts.getInProgressTickets());
-        stats.setResolvedTickets(counts.getResolvedTickets());
-        stats.setTotalTickets(counts.getTotalTickets());
-
-        DashboardAssignmentResponse assignments=new DashboardAssignmentResponse();
-        assignments.setAssignedTickets(counts.getAssignedTickets());
-        assignments.setUnassignedTickets(counts.getUnassignedTickets());
-
-        DashboardPriorityResponse prioritys=new DashboardPriorityResponse();
-        prioritys.setHighPriorityTickets(counts.getHighPriorityTickets());
-        prioritys.setMediumPriorityTickets(counts.getMediumPriorityTickets());
-        prioritys.setLowPriorityTickets(counts.getLowPriorityTickets());
-
-        List<TicketResponse> recentTickets=getRecentTicketsForDashboard(user);
-        List<TicketResponse> recentlyUpdatedTickets=getRecentlyUpdatedTicketsForDashboard(user);
-        List<AgentWorkloadResponse> agentWorkload=getAgenWorkload(user);
-
-        DashboardSummaryResponse response=new DashboardSummaryResponse();
-        response.setAgentWorkload(agentWorkload);
-        response.setRecentTickets(recentTickets);
-        response.setRecentlyUpdatedTickets(recentlyUpdatedTickets);
-        response.setStatsResponse(stats);
-        response.setPriorityResponse(prioritys);
-        response.setAssignmentDashboard(assignments);
-
-        return response;
     }
     private List<AgentWorkloadResponse> getAgenWorkload(User curr_user){
         List<AgentWorkloadResponse> result=new ArrayList<>();
@@ -543,11 +435,7 @@ public class TicketService {
         }
         else
             tickets=ticketRepository.findTop5ByCreatedByOrderByCreatedAtDesc(user);
-        List<TicketResponse> responses=new ArrayList<>();
-        for (Ticket ticket:tickets){
-            responses.add(mapTicketToResponse(ticket));
-        }
-        return responses;
+        return mapTicketsToResponses(tickets);
     }
     private List<TicketResponse> getRecentlyUpdatedTicketsForDashboard(User user) {
         List<Ticket> tickets;
@@ -558,12 +446,7 @@ public class TicketService {
         } else {
             tickets = ticketRepository.findTop5ByCreatedByOrderByUpdatedAtDesc(user);
         }
-        List<TicketResponse> responses = new ArrayList<>();
-        for (Ticket ticket : tickets) {
-            responses.add(mapTicketToResponse(ticket));
-        }
-
-        return responses;
+        return mapTicketsToResponses(tickets);
     }
     private DashboardCountsProjection getDashboardCounts(User user) {
         if (user.getRole() == Role.CLIENT) {
@@ -600,5 +483,54 @@ public class TicketService {
                 TicketPriority.LOW
         );
     }
+    private Ticket getTicketAndValidate(long tickedId,Authentication authentication){
+        Ticket ticket=findTicketEntityById(tickedId);
+        validateTicketAccess(getCurrentUser(authentication),ticket);
+        return ticket;
+    }
+    private Pageable buildPageable(int page, int size, String sortBy, String direction) {
+        if (page < 0) {
+            page = 0;
+        }
 
+        if (size <= 0) {
+            size = 10;
+        }
+
+        if (size > 100) {
+            size = 100;
+        }
+
+        List<String> allowedSortFields = List.of("id", "title", "status", "priority", "createdAt", "updatedAt");
+        if (!allowedSortFields.contains(sortBy)) {
+            sortBy = "id";
+        }
+
+        Sort sort = direction != null && direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        return PageRequest.of(page, size, sort);
+    }
+    private List<TicketResponse> mapTicketsToResponses(List<Ticket> tickets) {
+        List<TicketResponse> responses = new ArrayList<>();
+        for (Ticket ticket : tickets) {
+            responses.add(mapTicketToResponse(ticket));
+        }
+        return responses;
+    }
+    private List<CommentResponse> mapCommentsToResponses(List<Comment> comments) {
+        List<CommentResponse> responses = new ArrayList<>();
+        for (Comment comment : comments) {
+            responses.add(mapCommentToResponse(comment));
+        }
+        return responses;
+    }
+    private List<TicketHistoryResponse> mapHistoryToResponses(List<TicketHistory> historyList) {
+        List<TicketHistoryResponse> responses = new ArrayList<>();
+        for (TicketHistory history : historyList) {
+            responses.add(mapHistoryToResponse(history));
+        }
+        return responses;
+    }
 }

@@ -110,5 +110,4 @@ public class IntegrationTestHelper {
         registerUser(fullName, email, password);
         return loginAndGetToken(email, password);
     }
-
 }
