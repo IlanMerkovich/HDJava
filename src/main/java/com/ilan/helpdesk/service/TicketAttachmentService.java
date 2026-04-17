@@ -18,7 +18,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -30,10 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class TicketAttachmentService {
@@ -43,7 +39,7 @@ public class TicketAttachmentService {
     private final NotificationService notificationService;
     private final Path uploadPath;
     private final TicketService ticketService;
-    private static final Set<String>ALLOWED_EXTENSIONS=Set.of(".png",".jpg",".jpeg","pdf",".txt");
+    private static final Set<String>ALLOWED_EXTENSIONS=Set.of(".png",".jpg",".jpeg",".pdf",".txt");
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/png", "image/jpeg", "application/pdf", "text/plain");
 
     private void validateAttachmentFile(MultipartFile file){
@@ -176,7 +172,7 @@ public class TicketAttachmentService {
                 .orElseThrow(()->new ResourceNotFoundException("attachment with id: "+attachmentId+" not found"));
         User user=getCurrentUser(authentication);
         boolean isAdmin=user.getRole().name().equals("ADMIN");
-        boolean isUploader=attachment.getCreatedBy()!=null && attachment.getCreatedBy().getId()== user.getId();
+        boolean isUploader=attachment.getCreatedBy()!=null && Objects.equals(attachment.getCreatedBy().getId(),user.getId());
 
         if (!isAdmin && !isUploader){
             throw new ResourceNotFoundException("attachment with id: "+attachmentId+" not found");

@@ -100,7 +100,7 @@ public class TicketService {
     }
     public TicketResponse createTicket(CreateTicketRequest request, Authentication authentication) {
         String email=authentication.getName();
-        User user=userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
+        User user=getCurrentUser(authentication);
 
         Ticket ticket = new Ticket();
         ticket.setCreatedBy(user);
@@ -301,9 +301,9 @@ public class TicketService {
             response.setAssignedToFullName(ticket.getAssignedTo().getFullName());
             response.setAssignedToEmail(ticket.getAssignedTo().getEmail());
         }
-
-        response.setCommentsCount(0);
-        response.setComments(new ArrayList<>());
+        List<CommentResponse>commentsResponses=mapCommentsToResponses(ticket.getComments());
+        response.setComments(commentsResponses);
+        response.setCommentsCount(ticket.getComments().size());
 
         return response;
     }

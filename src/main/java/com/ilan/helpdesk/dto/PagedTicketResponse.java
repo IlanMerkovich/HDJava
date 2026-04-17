@@ -3,7 +3,7 @@ package com.ilan.helpdesk.dto;
 import java.util.List;
 
 public class PagedTicketResponse {
-    private List<TicketResponse>content;
+    private List<TicketResponse> content;
     private int page;
     private int size;
     private long totalElements;
