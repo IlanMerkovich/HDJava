@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createTicket } from '../api/ticketApi'
-import { Card, SectionHeader } from '../components/ui'
-import { buttonVariants } from '../components/ui'
+import { Card, SectionHeader, buttonVariants, formControlVariants } from '../components/ui'
 import type { TicketPriority } from '../types/ticket'
 
 export default function CreateTicketPage() {
@@ -15,11 +14,16 @@ export default function CreateTicketPage() {
     const [priority, setPriority] = useState<TicketPriority>('MEDIUM')
     const [error, setError] = useState('')
 
+    const TITLE_MIN_LENGTH = 3
+    const TITLE_MAX_LENGTH = 100
+    const DESCRIPTION_MIN_LENGTH = 5
+    const DESCRIPTION_MAX_LENGTH = 500
+
     const createTicketMutation = useMutation({
         mutationFn: () =>
             createTicket({
-                title,
-                description,
+                title: title.trim(),
+                description: description.trim(),
                 priority,
             }),
         onSuccess: async (createdTicket) => {
@@ -39,13 +43,29 @@ export default function CreateTicketPage() {
     function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
 
-        if (!title.trim()) {
+        const normalizedTitle = title.trim()
+        const normalizedDescription = description.trim()
+
+        if (!normalizedTitle) {
             setError('Title is required')
             return
         }
 
-        if (!description.trim()) {
+        if (normalizedTitle.length < TITLE_MIN_LENGTH || normalizedTitle.length > TITLE_MAX_LENGTH) {
+            setError(`Title must be between ${TITLE_MIN_LENGTH} and ${TITLE_MAX_LENGTH} characters`)
+            return
+        }
+
+        if (!normalizedDescription) {
             setError('Description is required')
+            return
+        }
+
+        if (
+            normalizedDescription.length < DESCRIPTION_MIN_LENGTH ||
+            normalizedDescription.length > DESCRIPTION_MAX_LENGTH
+        ) {
+            setError(`Description must be between ${DESCRIPTION_MIN_LENGTH} and ${DESCRIPTION_MAX_LENGTH} characters`)
             return
         }
 
@@ -76,27 +96,33 @@ export default function CreateTicketPage() {
                             <label className="block text-sm font-medium mb-1">Title</label>
                             <input
                                 type="text"
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                                className={formControlVariants()}
                                 placeholder="Enter ticket title"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
+                                minLength={TITLE_MIN_LENGTH}
+                                maxLength={TITLE_MAX_LENGTH}
+                                required
                             />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium mb-1">Description</label>
                             <textarea
-                                className="w-full min-h-[160px] rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                                className={formControlVariants({ size: 'lg', className: 'min-h-[160px]' })}
                                 placeholder="Describe the issue"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
+                                minLength={DESCRIPTION_MIN_LENGTH}
+                                maxLength={DESCRIPTION_MAX_LENGTH}
+                                required
                             />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium mb-1">Priority</label>
                             <select
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                                className={formControlVariants()}
                                 value={priority}
                                 onChange={(e) => setPriority(e.target.value as TicketPriority)}
                             >

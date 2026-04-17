@@ -4,4 +4,7 @@ export { SectionHeader } from './SectionHeader'
 export type { BadgeTone } from './Badge'
 export { buttonVariants } from './buttonVariants'
 export type { ButtonVariant, ButtonSize, ButtonVariantOptions } from './buttonVariants'
+export { formControlVariants } from './formControlVariants'
+export type { FormControlSize, FormControlOptions } from './formControlVariants'
+export { ConfirmDialog } from './ConfirmDialog'
 

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -5,11 +6,11 @@ import {
     markAllNotificationsAsRead,
     markNotificationAsRead,
 } from '../api/notificationApi'
-import { Badge, Card, SectionHeader } from '../components/ui'
-import { buttonVariants } from '../components/ui'
+import { Badge, Card, ConfirmDialog, SectionHeader, buttonVariants } from '../components/ui'
 
 export default function NotificationsPage() {
     const queryClient = useQueryClient()
+    const [isMarkAllConfirmOpen, setIsMarkAllConfirmOpen] = useState(false)
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['notifications'],
@@ -54,12 +55,12 @@ export default function NotificationsPage() {
             <div className="mx-auto max-w-5xl space-y-6">
                 <SectionHeader
                     title="Notifications"
-                    description="View and manage your notifications"
+                    description="Review updates from ticket activity and manage unread items quickly."
                     actions={
                         <>
                             <button
                                 type="button"
-                                onClick={() => markAllAsReadMutation.mutate()}
+                                onClick={() => setIsMarkAllConfirmOpen(true)}
                                 disabled={markAllAsReadMutation.isPending || unreadCount === 0}
                                 className={buttonVariants()}
                             >
@@ -76,20 +77,20 @@ export default function NotificationsPage() {
                     }
                 />
 
-                <Card className="p-5">
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="rounded-xl border p-4 min-w-[180px]">
-                            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Total</h2>
+                <Card className="p-5 sm:p-6">
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Total</h2>
                             <p className="text-2xl font-bold text-slate-900">{notifications.length}</p>
                         </div>
 
-                        <div className="rounded-xl border p-4 min-w-[180px]">
-                            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Unread</h2>
+                        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                            <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-700">Unread</h2>
                             <p className="text-2xl font-bold text-slate-900">{unreadCount}</p>
                         </div>
 
-                        <div className="rounded-xl border p-4 min-w-[180px]">
-                            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Read</h2>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Read</h2>
                             <p className="text-2xl font-bold text-slate-900">{notifications.length - unreadCount}</p>
                         </div>
                     </div>
@@ -102,13 +103,15 @@ export default function NotificationsPage() {
                                 <div
                                     key={notification.id}
                                     className={`rounded-xl border p-4 ${
-                                        notification.read ? 'bg-white' : 'bg-blue-50/60'
+                                        notification.read
+                                            ? 'border-slate-200 bg-white'
+                                            : 'border-blue-200 bg-blue-50/70 shadow-sm'
                                     }`}
                                 >
                                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                                         <div className="space-y-2">
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <Badge tone={notification.read ? 'neutral' : 'blue'} className={notification.read ? '' : 'text-white bg-blue-600'}>
+                                                <Badge tone={notification.read ? 'neutral' : 'blue'} className={notification.read ? '' : 'bg-blue-600 text-white ring-blue-600'}>
                                                     {notification.read ? 'Read' : 'Unread'}
                                                 </Badge>
 
@@ -159,6 +162,19 @@ export default function NotificationsPage() {
                         </div>
                     )}
                 </Card>
+
+                <ConfirmDialog
+                    open={isMarkAllConfirmOpen}
+                    title="Mark all as read?"
+                    message={`This will mark ${unreadCount} notification${unreadCount === 1 ? '' : 's'} as read.`}
+                    confirmLabel="Mark as read"
+                    isPending={markAllAsReadMutation.isPending}
+                    onCancel={() => setIsMarkAllConfirmOpen(false)}
+                    onConfirm={() => {
+                        setIsMarkAllConfirmOpen(false)
+                        markAllAsReadMutation.mutate()
+                    }}
+                />
             </div>
         </div>
     )

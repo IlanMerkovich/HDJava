@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { register } from '../api/authApi'
-import { Card } from '../components/ui'
-import { buttonVariants } from '../components/ui'
+import { Card, buttonVariants, formControlVariants } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 
 export default function RegisterPage() {
@@ -59,19 +58,20 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4">
-            <Card className="w-full max-w-md p-6">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 mb-2">Create Account</h1>
-                <p className="text-sm text-slate-600 mb-6">
-                    Register to access the Help Desk system
-                </p>
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 via-slate-50 to-slate-100 p-4">
+            <Card className="w-full max-w-md p-6 sm:p-7">
+                <div className="mb-6 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Help Desk</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">Create account</h1>
+                    <p className="text-sm text-slate-600">Register to access the Help Desk system</p>
+                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium mb-1">Full Name</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Full Name</label>
                         <input
                             type="text"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                            className={formControlVariants()}
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                             placeholder="Your full name"
@@ -79,10 +79,10 @@ export default function RegisterPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-1">Email</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Email</label>
                         <input
                             type="email"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                            className={formControlVariants()}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="you@example.com"
@@ -90,10 +90,10 @@ export default function RegisterPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium mb-1">Password</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Password</label>
                         <input
                             type="password"
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                            className={formControlVariants()}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Choose a password"
@@ -115,7 +115,7 @@ export default function RegisterPage() {
                     </button>
                 </form>
 
-                <p className="text-sm text-slate-600 mt-4">
+                <p className="mt-5 text-sm text-slate-600">
                     Already have an account?{' '}
                     <Link to="/login" className="text-blue-600 hover:underline">
                         Login

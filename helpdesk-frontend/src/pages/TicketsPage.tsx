@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { getTickets } from '../api/ticketApi'
 import { Badge, Card, SectionHeader } from '../components/ui'
-import { buttonVariants } from '../components/ui'
+import { buttonVariants, formControlVariants } from '../components/ui'
 import { getPriorityBadgeTone, getStatusBadgeTone } from '../utils/ticketBadgeTone'
 import type { TicketPriority, TicketQueryParams, TicketStatus } from '../types/ticket'
 
@@ -93,7 +93,7 @@ export default function TicketsPage() {
             <div className="space-y-6">
                 <SectionHeader
                     title="Tickets"
-                    description="Search, filter and browse your tickets"
+                    description="Search, filter, and sort tickets quickly with a clean queue-style view."
                     actions={
                         <>
                             <Link
@@ -113,25 +113,30 @@ export default function TicketsPage() {
                     }
                 />
 
-                <Card className="p-5">
+                <Card className="p-5 sm:p-6">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                        <h2 className="text-lg font-semibold text-slate-900">Filters</h2>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Refine results</p>
+                    </div>
+
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         <div>
-                            <label className="block text-sm font-medium mb-1">Search</label>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Search</label>
                             <input
                                 type="text"
                                 value={searchInput}
                                 onChange={(e) => setSearchInput(e.target.value)}
                                 placeholder="Search by title or description"
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                                className={formControlVariants()}
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-1">Status</label>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value as TicketStatus | '')}
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                                className={formControlVariants()}
                             >
                                 <option value="">All</option>
                                 <option value="OPEN">OPEN</option>
@@ -142,11 +147,11 @@ export default function TicketsPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-1">Priority</label>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Priority</label>
                             <select
                                 value={priorityFilter}
                                 onChange={(e) => setPriorityFilter(e.target.value as TicketPriority | '')}
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                                className={formControlVariants()}
                             >
                                 <option value="">All</option>
                                 <option value="LOW">LOW</option>
@@ -156,11 +161,11 @@ export default function TicketsPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-1">Sort By</label>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Sort By</label>
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                                className={formControlVariants()}
                             >
                                 <option value="updatedAt">updatedAt</option>
                                 <option value="createdAt">createdAt</option>
@@ -172,11 +177,11 @@ export default function TicketsPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-1">Direction</label>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Direction</label>
                             <select
                                 value={direction}
                                 onChange={(e) => setDirection(e.target.value as 'asc' | 'desc')}
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                                className={formControlVariants()}
                             >
                                 <option value="desc">desc</option>
                                 <option value="asc">asc</option>
@@ -184,11 +189,11 @@ export default function TicketsPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium mb-1">Page Size</label>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Page Size</label>
                             <select
                                 value={size}
                                 onChange={(e) => setSize(Number(e.target.value))}
-                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                                className={formControlVariants()}
                             >
                                 <option value={5}>5</option>
                                 <option value={10}>10</option>
@@ -198,7 +203,7 @@ export default function TicketsPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 mt-4">
+                    <div className="mt-5 flex flex-wrap items-center gap-3">
                         <button
                             type="button"
                             onClick={handleApplyFilters}
@@ -221,43 +226,52 @@ export default function TicketsPage() {
                     {data && data.content.length > 0 ? (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 border-b border-slate-200">
+                                <thead className="border-b border-slate-200 bg-slate-50">
                                 <tr>
-                                    <th className="px-4 py-3 text-sm font-semibold">ID</th>
-                                    <th className="px-4 py-3 text-sm font-semibold">Title</th>
-                                    <th className="px-4 py-3 text-sm font-semibold">Status</th>
-                                    <th className="px-4 py-3 text-sm font-semibold">Priority</th>
-                                    <th className="px-4 py-3 text-sm font-semibold">Created By</th>
-                                    <th className="px-4 py-3 text-sm font-semibold">Assigned To</th>
-                                    <th className="px-4 py-3 text-sm font-semibold">Comments</th>
-                                    <th className="px-4 py-3 text-sm font-semibold">Updated At</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">ID</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Title</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Priority</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Created By</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Assigned To</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Comments</th>
+                                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Updated At</th>
                                 </tr>
                                 </thead>
 
                                 <tbody>
                                 {data.content.map((ticket) => (
-                                    <tr key={ticket.id} className="border-b border-slate-100 last:border-b-0">
-                                        <td className="px-4 py-3">{ticket.id}</td>
+                                    <tr key={ticket.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50 last:border-b-0">
+                                        <td className="px-4 py-3 font-mono text-xs text-slate-500">#{ticket.id}</td>
                                         <td className="px-4 py-3 font-medium text-slate-900">
                                             <Link
                                                 to={`/tickets/${ticket.id}`}
-                                                className="text-blue-600 hover:underline"
+                                                className="block max-w-[320px] truncate text-blue-700 hover:text-blue-800 hover:underline"
+                                                title={ticket.title}
                                             >
                                                 {ticket.title}
                                             </Link>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <Badge tone={getStatusBadgeTone(ticket.status)}>
+                                            <Badge tone={getStatusBadgeTone(ticket.status)} className="uppercase tracking-wide">
                                                 {ticket.status}
                                             </Badge>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <Badge tone={getPriorityBadgeTone(ticket.priority)}>
+                                            <Badge tone={getPriorityBadgeTone(ticket.priority)} className="uppercase tracking-wide">
                                                 {ticket.priority}
                                             </Badge>
                                         </td>
-                                        <td className="px-4 py-3">{ticket.createdByEmail ?? '-'}</td>
-                                        <td className="px-4 py-3">{ticket.assignedToEmail ?? '-'}</td>
+                                        <td className="px-4 py-3">
+                                            <span className="block max-w-[220px] truncate" title={ticket.createdByEmail ?? '-'}>
+                                                {ticket.createdByEmail ?? '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="block max-w-[220px] truncate" title={ticket.assignedToEmail ?? '-'}>
+                                                {ticket.assignedToEmail ?? '-'}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3">{ticket.commentsCount}</td>
                                         <td className="px-4 py-3">
                                             {new Date(ticket.updatedAt).toLocaleString()}
@@ -277,7 +291,7 @@ export default function TicketsPage() {
                 </Card>
 
                 {data && (
-                    <Card className="p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <Card className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
                         <div className="text-sm text-slate-600">
                             Page {data.page + 1} of {Math.max(data.totalPages, 1)} | Total tickets:{' '}
                             {data.totalElements}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -18,9 +18,10 @@ import {
     uploadAttachment,
 } from '../api/attachmentApi'
 import { getUsers } from '../api/userApi'
-import { Badge, Card, SectionHeader, buttonVariants } from '../components/ui'
+import { Badge, Card, ConfirmDialog, SectionHeader, buttonVariants, formControlVariants } from '../components/ui'
 import { getPriorityBadgeTone, getStatusBadgeTone } from '../utils/ticketBadgeTone'
 import { useAuth } from '../context/AuthContext'
+import type { TicketAttachmentResponse } from '../types/attachment'
 import type { TicketStatus } from '../types/ticket'
 
 const surfaceCardClass = 'p-6'
@@ -36,9 +37,12 @@ export default function TicketDetailsPage() {
     const [commentError, setCommentError] = useState('')
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
     const [attachmentError, setAttachmentError] = useState('')
+    const [attachmentToDelete, setAttachmentToDelete] = useState<TicketAttachmentResponse | null>(null)
 
     const [statusActionError, setStatusActionError] = useState('')
+    const [isUnassignConfirmOpen, setIsUnassignConfirmOpen] = useState(false)
 
     const [selectedAgentId, setSelectedAgentId] = useState('')
     const [assignmentError, setAssignmentError] = useState('')
@@ -111,14 +115,12 @@ export default function TicketDetailsPage() {
     })
 
     const uploadAttachmentMutation = useMutation({
-        mutationFn: () => {
-            if (!selectedFile) {
-                throw new Error('Please choose a file first')
-            }
-            return uploadAttachment(ticketId, selectedFile)
-        },
+        mutationFn: (file: File) => uploadAttachment(ticketId, file),
         onSuccess: async () => {
             setSelectedFile(null)
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ''
+            }
             setAttachmentError('')
             await queryClient.invalidateQueries({ queryKey: ['attachments', ticketId] })
         },
@@ -134,6 +136,7 @@ export default function TicketDetailsPage() {
     const deleteAttachmentMutation = useMutation({
         mutationFn: (attachmentId: number) => deleteAttachment(attachmentId),
         onSuccess: async () => {
+            setAttachmentToDelete(null)
             setAttachmentError('')
             await queryClient.invalidateQueries({ queryKey: ['attachments', ticketId] })
         },
@@ -375,77 +378,221 @@ export default function TicketDetailsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="mx-auto max-w-5xl space-y-6">
-                <SectionHeader
-                    title={`Ticket #${data.id}`}
-                    description="Ticket details, comments and attachments"
-                    actions={
-                        <Link
-                            to="/tickets"
-                            className={buttonVariants({ variant: 'neutral' })}
-                        >
-                            Back to Tickets
-                        </Link>
-                    }
-                />
+            <SectionHeader
+                title={`Ticket #${data.id}`}
+                description="Review status, assignment, timeline, comments, and attachments."
+                actions={
+                    <Link
+                        to="/tickets"
+                        className={buttonVariants({ variant: 'neutral' })}
+                    >
+                        Back to Tickets
+                    </Link>
+                }
+            />
 
-                <Card className={`${surfaceCardClass} space-y-6`}>
-                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div>
-                            <h2 className="text-2xl font-semibold">{data.title}</h2>
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
-                                <Badge tone={getStatusBadgeTone(data.status)}>
+            <div className="grid gap-6 xl:grid-cols-12">
+                <div className="space-y-6 xl:col-span-8">
+                    <Card className={`${surfaceCardClass} space-y-4`}>
+                        <div className="space-y-3">
+                            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{data.title}</h2>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge tone={getStatusBadgeTone(data.status)} className="uppercase tracking-wide">
                                     {data.status}
                                 </Badge>
-                                <Badge tone={getPriorityBadgeTone(data.priority)}>
+                                <Badge tone={getPriorityBadgeTone(data.priority)} className="uppercase tracking-wide">
                                     {data.priority}
                                 </Badge>
                             </div>
-                            <p className="text-slate-600 mt-2 whitespace-pre-line">
-                                {data.description}
-                            </p>
                         </div>
 
-                        <div className="flex flex-col items-start gap-3">
-                            {renderStatusActions(data.status)}
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700 whitespace-pre-line">
+                            {data.description}
+                        </div>
+                    </Card>
 
+                    <Card className={surfaceCardClass}>
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-xl font-bold tracking-tight text-slate-900">History</h3>
+                            <span className="text-sm text-slate-600">{history?.length ?? 0} events</span>
+                        </div>
+
+                        {historyLoading ? (
+                            <div className="text-slate-600">Loading history...</div>
+                        ) : historyError instanceof Error ? (
+                            <div className="rounded-lg bg-red-100 px-4 py-3 text-red-700">
+                                Failed to load history: {historyError.message}
+                            </div>
+                        ) : history && history.length > 0 ? (
+                            <div className="space-y-4">
+                                {history.map((item) => (
+                                    <div key={item.id} className="relative pl-6">
+                                        <span className="absolute left-0 top-2 h-2.5 w-2.5 rounded-full bg-slate-400" />
+                                        <span className="absolute left-[4px] top-5 h-[calc(100%-4px)] w-px bg-slate-200" />
+                                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-slate-900">{item.actionType}</p>
+                                                    <p className="text-sm text-slate-500">
+                                                        By: {item.changedByFullName ?? '-'} ({item.changedByEmail ?? '-'})
+                                                    </p>
+                                                </div>
+                                                <p className="text-sm text-slate-500">{new Date(item.changedAt).toLocaleString()}</p>
+                                            </div>
+                                            <p className="mt-2 text-sm text-slate-700">{formatHistoryItem(item)}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-slate-600">
+                                No history events yet.
+                            </div>
+                        )}
+                    </Card>
+
+                    <Card className={surfaceCardClass}>
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-xl font-bold tracking-tight text-slate-900">Comments</h3>
+                            <span className="text-sm text-slate-600">{data.commentsCount} comments</span>
+                        </div>
+
+                        {canAddComment && (
+                            <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <h4 className="mb-3 text-base font-semibold text-slate-900">Add Comment</h4>
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault()
+
+                                        if (!commentText.trim()) {
+                                            setCommentError('Comment cannot be empty')
+                                            return
+                                        }
+
+                                        setCommentError('')
+                                        addCommentMutation.mutate()
+                                    }}
+                                    className="space-y-3"
+                                >
+                                    <textarea
+                                        className={formControlVariants({ size: 'lg', className: 'min-h-[120px]' })}
+                                        placeholder="Write your comment here..."
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
+                                    />
+
+                                    {commentError && (
+                                        <div className="rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">
+                                            {commentError}
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        disabled={addCommentMutation.isPending}
+                                        className={buttonVariants()}
+                                    >
+                                        {addCommentMutation.isPending ? 'Adding Comment...' : 'Add Comment'}
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+
+                        {data.comments.length > 0 ? (
+                            <div className="space-y-4">
+                                {data.comments.map((comment) => (
+                                    <div key={comment.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                                        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="font-semibold text-slate-900">{comment.authorName ?? 'Unknown User'}</p>
+                                                <p className="text-sm text-slate-500">{comment.authorEmail ?? '-'}</p>
+                                            </div>
+                                            <p className="text-sm text-slate-500">{new Date(comment.createdAt).toLocaleString()}</p>
+                                        </div>
+                                        <p className="whitespace-pre-line text-slate-700">{comment.content}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-slate-600">
+                                No comments yet.
+                            </div>
+                        )}
+                    </Card>
+                </div>
+
+                <div className="space-y-6 xl:col-span-4">
+                    <Card className={surfaceCardClass}>
+                        <h3 className="mb-4 text-lg font-bold tracking-tight text-slate-900">Ticket Details</h3>
+                        <div className="space-y-3 text-sm">
+                            <div className="rounded-xl border border-slate-200 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
+                                <div className="mt-1">
+                                    <Badge tone={getStatusBadgeTone(data.status)}>{data.status}</Badge>
+                                </div>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Priority</p>
+                                <div className="mt-1">
+                                    <Badge tone={getPriorityBadgeTone(data.priority)}>{data.priority}</Badge>
+                                </div>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created By</p>
+                                <p className="mt-1 font-medium text-slate-800">{data.createdByEmail ?? '-'}</p>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Assigned To</p>
+                                <p className="mt-1 font-medium text-slate-800">{data.assignedToEmail ?? '-'}</p>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created At</p>
+                                <p className="mt-1 font-medium text-slate-800">{new Date(data.createdAt).toLocaleString()}</p>
+                            </div>
+                            <div className="rounded-xl border border-slate-200 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Updated At</p>
+                                <p className="mt-1 font-medium text-slate-800">{new Date(data.updatedAt).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card className={surfaceCardClass}>
+                        <h3 className="mb-3 text-lg font-bold tracking-tight text-slate-900">Status Actions</h3>
+                        <div className="space-y-3">
+                            {renderStatusActions(data.status) ?? (
+                                <p className="text-sm text-slate-600">No status actions available for your role.</p>
+                            )}
                             {statusActionError && (
-                                <div className="rounded-lg bg-red-100 text-red-700 px-3 py-2 text-sm">
+                                <div className="rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">
                                     {statusActionError}
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </Card>
 
                     {canManageAssignment && (
-                        <div className="rounded-2xl border p-5 space-y-4">
-                            <div className="flex items-center justify-between gap-4">
-                                <div>
-                                    <h3 className="text-xl font-semibold">Assignment</h3>
-                                    <p className="text-sm text-slate-500">
-                                        Assign this ticket to an agent or remove current assignment
-                                    </p>
-                                </div>
-
+                        <Card className={surfaceCardClass}>
+                            <div className="mb-4 flex items-center justify-between gap-2">
+                                <h3 className="text-lg font-bold tracking-tight text-slate-900">Assignment</h3>
                                 {data.assignedToEmail && (
                                     <button
                                         type="button"
-                                        onClick={() => unassignTicketMutation.mutate()}
+                                        onClick={() => setIsUnassignConfirmOpen(true)}
                                         disabled={unassignTicketMutation.isPending || assignTicketMutation.isPending}
-                                        className={buttonVariants({ variant: 'danger' })}
+                                        className={buttonVariants({ variant: 'danger', size: 'sm' })}
                                     >
                                         {unassignTicketMutation.isPending ? 'Unassigning...' : 'Unassign'}
                                     </button>
                                 )}
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-[1fr_auto] items-end">
+                            <div className="space-y-3">
                                 <div>
-                                    <label className="block text-sm font-medium mb-1">Assign to Agent</label>
+                                    <label className="mb-1 block text-sm font-medium text-slate-700">Assign to Agent</label>
                                     <select
                                         value={selectedAgentId}
                                         onChange={(e) => setSelectedAgentId(e.target.value)}
-                                        className="w-full rounded-lg border px-3 py-2 outline-none focus:ring"
+                                        className={formControlVariants()}
                                         disabled={usersLoading || assignTicketMutation.isPending || unassignTicketMutation.isPending}
                                     >
                                         <option value="">Select agent</option>
@@ -469,220 +616,127 @@ export default function TicketDetailsPage() {
                                         assignTicketMutation.mutate(Number(selectedAgentId))
                                     }}
                                     disabled={assignTicketMutation.isPending || usersLoading || unassignTicketMutation.isPending}
-                                    className={buttonVariants({ variant: 'secondary' })}
+                                    className={buttonVariants({ variant: 'secondary', className: 'w-full' })}
                                 >
                                     {assignTicketMutation.isPending ? 'Assigning...' : 'Assign'}
                                 </button>
-                            </div>
 
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="rounded-xl border p-4">
-                                    <h4 className="text-sm text-slate-500 mb-1">Current Assignee</h4>
-                                    <p className="font-semibold">{data.assignedToFullName ?? '-'}</p>
+                                <div className="rounded-xl border border-slate-200 p-3">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current Assignee</p>
+                                    <p className="mt-1 font-medium text-slate-800">{data.assignedToFullName ?? '-'}</p>
                                     <p className="text-sm text-slate-500">{data.assignedToEmail ?? '-'}</p>
                                 </div>
 
-                                <div className="rounded-xl border p-4">
-                                    <h4 className="text-sm text-slate-500 mb-1">Agents Available</h4>
+                                <div className="rounded-xl border border-slate-200 p-3">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Agents Available</p>
                                     {usersLoading ? (
-                                        <p className="text-slate-600">Loading agents...</p>
+                                        <p className="mt-1 text-sm text-slate-600">Loading agents...</p>
                                     ) : usersError instanceof Error ? (
-                                        <p className="text-red-600 text-sm">{usersError.message}</p>
+                                        <p className="mt-1 text-sm text-red-600">{usersError.message}</p>
                                     ) : (
-                                        <p className="font-semibold">{agents.length}</p>
+                                        <p className="mt-1 font-medium text-slate-800">{agents.length}</p>
                                     )}
                                 </div>
-                            </div>
 
-                            {assignmentError && (
-                                <div className="rounded-lg bg-red-100 text-red-700 px-3 py-2 text-sm">
-                                    {assignmentError}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div className="rounded-xl border p-4">
-                            <h3 className="text-sm text-slate-500 mb-1">Status</h3>
-                            <p>
-                                <Badge tone={getStatusBadgeTone(data.status)}>
-                                {data.status}
-                                </Badge>
-                            </p>
-                        </div>
-
-                        <div className="rounded-xl border p-4">
-                            <h3 className="text-sm text-slate-500 mb-1">Priority</h3>
-                            <p>
-                                <Badge tone={getPriorityBadgeTone(data.priority)}>
-                                {data.priority}
-                                </Badge>
-                            </p>
-                        </div>
-
-                        <div className="rounded-xl border p-4">
-                            <h3 className="text-sm text-slate-500 mb-1">Created By</h3>
-                            <p className="font-semibold">{data.createdByEmail ?? '-'}</p>
-                        </div>
-
-                        <div className="rounded-xl border p-4">
-                            <h3 className="text-sm text-slate-500 mb-1">Assigned To</h3>
-                            <p className="font-semibold">{data.assignedToEmail ?? '-'}</p>
-                        </div>
-
-                        <div className="rounded-xl border p-4">
-                            <h3 className="text-sm text-slate-500 mb-1">Created At</h3>
-                            <p className="font-semibold">
-                                {new Date(data.createdAt).toLocaleString()}
-                            </p>
-                        </div>
-
-                        <div className="rounded-xl border p-4">
-                            <h3 className="text-sm text-slate-500 mb-1">Updated At</h3>
-                            <p className="font-semibold">
-                                {new Date(data.updatedAt).toLocaleString()}
-                            </p>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card className={surfaceCardClass}>
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-2xl font-bold">History</h2>
-                        <span className="text-sm text-slate-600">
-              {history?.length ?? 0} events
-            </span>
-                    </div>
-
-                    {historyLoading ? (
-                        <div className="text-slate-600">Loading history...</div>
-                    ) : historyError instanceof Error ? (
-                        <div className="rounded-lg bg-red-100 text-red-700 px-4 py-3">
-                            Failed to load history: {historyError.message}
-                        </div>
-                    ) : history && history.length > 0 ? (
-                        <div className="space-y-3">
-                            {history.map((item) => (
-                                <div key={item.id} className="rounded-xl border p-4">
-                                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                                        <div>
-                                            <p className="font-semibold">{item.actionType}</p>
-                                            <p className="text-sm text-slate-500">
-                                                By: {item.changedByFullName ?? '-'} ({item.changedByEmail ?? '-'})
-                                            </p>
-                                        </div>
-
-                                        <p className="text-sm text-slate-500">
-                                            {new Date(item.changedAt).toLocaleString()}
-                                        </p>
+                                {assignmentError && (
+                                    <div className="rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">
+                                        {assignmentError}
                                     </div>
-
-                                    <p className="mt-2 text-sm text-slate-700">
-                                        {formatHistoryItem(item)}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-slate-600">No history events yet.</div>
+                                )}
+                            </div>
+                        </Card>
                     )}
-                </Card>
 
-                <Card className={surfaceCardClass}>
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-2xl font-bold">Attachments</h2>
-                        <span className="text-sm text-slate-600">
-              {attachments?.length ?? 0} files
-            </span>
-                    </div>
+                    <Card className={surfaceCardClass}>
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-lg font-bold tracking-tight text-slate-900">Attachments</h3>
+                            <span className="text-sm text-slate-600">{attachments?.length ?? 0} files</span>
+                        </div>
 
-                    {canUploadAttachment && (
-                        <div className="mb-6 rounded-xl border p-4 bg-slate-50">
-                            <h3 className="text-lg font-semibold mb-3">Upload Attachment</h3>
-
+                        {canUploadAttachment && (
                             <form
                                 onSubmit={(e) => {
                                     e.preventDefault()
 
-                                    if (!selectedFile) {
+                                    const file = fileInputRef.current?.files?.[0] ?? selectedFile
+
+                                    if (!file) {
                                         setAttachmentError('Please choose a file first')
                                         return
                                     }
 
                                     setAttachmentError('')
-                                    uploadAttachmentMutation.mutate()
+                                    uploadAttachmentMutation.mutate(file)
                                 }}
-                                className="space-y-3"
+                                className="mb-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
                             >
                                 <input
+                                    ref={fileInputRef}
                                     type="file"
-                                    className="block w-full text-sm"
+                                    className="hidden"
                                     onChange={(e) => {
                                         const file = e.target.files?.[0] ?? null
                                         setSelectedFile(file)
+                                        if (file) {
+                                            setAttachmentError('')
+                                        }
                                     }}
                                 />
 
-                                {attachmentError && (
-                                    <div className="rounded-lg bg-red-100 text-red-700 px-3 py-2 text-sm">
-                                        {attachmentError}
-                                    </div>
-                                )}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className={buttonVariants({ variant: 'neutral', size: 'sm' })}
+                                    >
+                                        Choose File
+                                    </button>
+                                    {selectedFile ? (
+                                        <span className="max-w-[220px] truncate text-xs text-slate-600" title={selectedFile.name}>
+                                            {selectedFile.name}
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-slate-500">No file selected</span>
+                                    )}
+                                </div>
 
                                 <button
                                     type="submit"
-                                    disabled={uploadAttachmentMutation.isPending}
-                                    className={buttonVariants()}
+                                    disabled={uploadAttachmentMutation.isPending || !selectedFile}
+                                    className={buttonVariants({ className: 'w-full' })}
                                 >
                                     {uploadAttachmentMutation.isPending ? 'Uploading...' : 'Upload Attachment'}
                                 </button>
                             </form>
-                        </div>
-                    )}
+                        )}
 
-                    {attachmentsLoading ? (
-                        <div className="text-slate-600">Loading attachments...</div>
-                    ) : attachmentsError instanceof Error ? (
-                        <div className="rounded-lg bg-red-100 text-red-700 px-4 py-3">
-                            Failed to load attachments: {attachmentsError.message}
-                        </div>
-                    ) : attachments && attachments.length > 0 ? (
-                        <div className="space-y-3">
-                            {attachments.map((attachment) => (
-                                <div
-                                    key={attachment.id}
-                                    className="rounded-xl border p-4 flex items-start justify-between gap-4"
-                                >
-                                    <div>
-                                        <p className="font-semibold">{attachment.originalFileName}</p>
-                                        <p className="text-sm text-slate-500">
-                                            {attachment.contentType} · {attachment.size} bytes
-                                        </p>
-                                        <p className="text-sm text-slate-500">
-                                            Uploaded by: {attachment.uploadedByEmail ?? '-'}
-                                        </p>
-                                        <p className="text-sm text-slate-500">
-                                            {new Date(attachment.createdAt).toLocaleString()}
-                                        </p>
-                                    </div>
+                        {attachmentError && (
+                            <div className="mb-4 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">
+                                {attachmentError}
+                            </div>
+                        )}
 
-                                    <div className="flex flex-col items-end gap-2">
-                                        <div className="text-sm text-slate-500">
-                                            {attachment.attachmentFileCategory}
-                                        </div>
-
-                                        <div className="flex flex-wrap justify-end gap-2">
+                        {attachmentsLoading ? (
+                            <div className="text-slate-600">Loading attachments...</div>
+                        ) : attachmentsError instanceof Error ? (
+                            <div className="rounded-lg bg-red-100 px-4 py-3 text-red-700">
+                                Failed to load attachments: {attachmentsError.message}
+                            </div>
+                        ) : attachments && attachments.length > 0 ? (
+                            <div className="space-y-3">
+                                {attachments.map((attachment) => (
+                                    <div key={attachment.id} className="rounded-xl border border-slate-200 p-3">
+                                        <p className="font-medium text-slate-900">{attachment.originalFileName}</p>
+                                        <p className="text-xs text-slate-500">{attachment.contentType} · {attachment.size} bytes</p>
+                                        <p className="text-xs text-slate-500">{new Date(attachment.createdAt).toLocaleString()}</p>
+                                        <div className="mt-3 flex flex-wrap gap-2">
                                             <button
                                                 type="button"
-                                                onClick={() =>
-                                                    handleDownload(attachment.id, attachment.originalFileName)
-                                                }
+                                                onClick={() => handleDownload(attachment.id, attachment.originalFileName)}
                                                 className={buttonVariants({ size: 'sm' })}
                                             >
                                                 Download
                                             </button>
-
                                             {attachment.previewable && (
                                                 <button
                                                     type="button"
@@ -692,11 +746,10 @@ export default function TicketDetailsPage() {
                                                     Preview
                                                 </button>
                                             )}
-
                                             {canDeleteAttachment && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => deleteAttachmentMutation.mutate(attachment.id)}
+                                                    onClick={() => setAttachmentToDelete(attachment)}
                                                     disabled={deleteAttachmentMutation.isPending}
                                                     className={buttonVariants({ variant: 'danger', size: 'sm' })}
                                                 >
@@ -705,94 +758,47 @@ export default function TicketDetailsPage() {
                                             )}
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-slate-600">No attachments yet.</div>
-                    )}
-                </Card>
-
-                <Card className={surfaceCardClass}>
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-2xl font-bold">Comments</h2>
-                        <span className="text-sm text-slate-600">
-              {data.commentsCount} comments
-            </span>
-                    </div>
-
-                    {canAddComment && (
-                        <div className="mb-6 rounded-xl border p-4 bg-slate-50">
-                            <h3 className="text-lg font-semibold mb-3">Add Comment</h3>
-
-                            <form
-                                onSubmit={(e) => {
-                                    e.preventDefault()
-
-                                    if (!commentText.trim()) {
-                                        setCommentError('Comment cannot be empty')
-                                        return
-                                    }
-
-                                    setCommentError('')
-                                    addCommentMutation.mutate()
-                                }}
-                                className="space-y-3"
-                            >
-                <textarea
-                    className="w-full rounded-lg border px-3 py-2 min-h-[120px] outline-none focus:ring"
-                    placeholder="Write your comment here..."
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                />
-
-                                {commentError && (
-                                    <div className="rounded-lg bg-red-100 text-red-700 px-3 py-2 text-sm">
-                                        {commentError}
-                                    </div>
-                                )}
-
-                                <button
-                                    type="submit"
-                                    disabled={addCommentMutation.isPending}
-                                    className={buttonVariants()}
-                                >
-                                    {addCommentMutation.isPending ? 'Adding Comment...' : 'Add Comment'}
-                                </button>
-                            </form>
-                        </div>
-                    )}
-
-                    {data.comments.length > 0 ? (
-                        <div className="space-y-4">
-                            {data.comments.map((comment) => (
-                                <div key={comment.id} className="rounded-xl border p-4">
-                                    <div className="flex items-center justify-between gap-4 mb-2">
-                                        <div>
-                                            <p className="font-semibold">
-                                                {comment.authorName ?? 'Unknown User'}
-                                            </p>
-                                            <p className="text-sm text-slate-500">
-                                                {comment.authorEmail ?? '-'}
-                                            </p>
-                                        </div>
-
-                                        <p className="text-sm text-slate-500">
-                                            {new Date(comment.createdAt).toLocaleString()}
-                                        </p>
-                                    </div>
-
-                                    <p className="text-slate-700 whitespace-pre-line">
-                                        {comment.content}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-slate-600">No comments yet.</div>
-                    )}
-                </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-slate-600">
+                                No attachments yet.
+                            </div>
+                        )}
+                    </Card>
+                </div>
             </div>
+
+            <ConfirmDialog
+                open={isUnassignConfirmOpen}
+                title="Unassign ticket?"
+                message="This will remove the current agent assignment from the ticket."
+                confirmLabel="Unassign"
+                isPending={unassignTicketMutation.isPending}
+                onCancel={() => setIsUnassignConfirmOpen(false)}
+                onConfirm={() => {
+                    setIsUnassignConfirmOpen(false)
+                    unassignTicketMutation.mutate()
+                }}
+            />
+
+            <ConfirmDialog
+                open={Boolean(attachmentToDelete)}
+                title="Delete attachment?"
+                message={`This will permanently delete ${attachmentToDelete?.originalFileName ?? 'this attachment'}.`}
+                confirmLabel="Delete attachment"
+                isPending={deleteAttachmentMutation.isPending}
+                onCancel={() => setAttachmentToDelete(null)}
+                onConfirm={() => {
+                    if (!attachmentToDelete) {
+                        return
+                    }
+
+                    const attachmentId = attachmentToDelete.id
+                    setAttachmentToDelete(null)
+                    deleteAttachmentMutation.mutate(attachmentId)
+                }}
+            />
         </div>
     )
 }

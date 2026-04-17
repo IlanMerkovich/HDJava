@@ -9,12 +9,12 @@ export type BadgeTone =
     | 'orange'
 
 const toneClassMap: Record<BadgeTone, string> = {
-    neutral: 'bg-slate-100 text-slate-700',
-    blue: 'bg-blue-100 text-blue-700',
-    amber: 'bg-amber-100 text-amber-700',
-    emerald: 'bg-emerald-100 text-emerald-700',
-    rose: 'bg-rose-100 text-rose-700',
-    orange: 'bg-orange-100 text-orange-700',
+    neutral: 'bg-slate-100 text-slate-700 ring-slate-200',
+    blue: 'bg-blue-100 text-blue-700 ring-blue-200',
+    amber: 'bg-amber-100 text-amber-700 ring-amber-200',
+    emerald: 'bg-emerald-100 text-emerald-700 ring-emerald-200',
+    rose: 'bg-rose-100 text-rose-700 ring-rose-200',
+    orange: 'bg-orange-100 text-orange-700 ring-orange-200',
 }
 
 type BadgeProps = {
@@ -32,6 +32,7 @@ export function Badge({ children, tone = 'neutral', className }: BadgeProps) {
         <span
             className={joinClasses(
                 'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
+                'items-center ring-1 ring-inset',
                 toneClassMap[tone],
                 className
             )}

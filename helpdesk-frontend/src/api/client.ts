@@ -31,6 +31,21 @@ export async function apiFetch<T>(
         if (
             responseData &&
             typeof responseData === 'object' &&
+            'errors' in responseData &&
+            responseData.errors &&
+            typeof responseData.errors === 'object'
+        ) {
+            const validationErrors = Object.values(responseData.errors as Record<string, unknown>)
+                .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+
+            if (validationErrors.length > 0) {
+                throw new Error(validationErrors[0])
+            }
+        }
+
+        if (
+            responseData &&
+            typeof responseData === 'object' &&
             'message' in responseData &&
             typeof responseData.message === 'string'
         ) {
