@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createTicket } from '../api/ticketApi'
-import { Card, SectionHeader, buttonVariants, formControlVariants } from '../components/ui'
+import { Card, SectionHeader, buttonVariants, formControlVariants, useToast } from '../components/ui'
 import type { TicketPriority } from '../types/ticket'
 
 export default function CreateTicketPage() {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
+    const toast = useToast()
 
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
@@ -29,13 +30,16 @@ export default function CreateTicketPage() {
         onSuccess: async (createdTicket) => {
             setError('')
             await queryClient.invalidateQueries({ queryKey: ['tickets'] })
+            toast.success('Ticket created successfully')
             navigate(`/tickets/${createdTicket.id}`)
         },
         onError: (err) => {
             if (err instanceof Error) {
                 setError(err.message)
+                toast.error(err.message)
             } else {
                 setError('Failed to create ticket')
+                toast.error('Failed to create ticket')
             }
         },
     })

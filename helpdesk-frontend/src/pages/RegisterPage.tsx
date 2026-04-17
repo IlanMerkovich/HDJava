@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { register } from '../api/authApi'
-import { Card, buttonVariants, formControlVariants } from '../components/ui'
+import { BrandLogo, Card, buttonVariants, formControlVariants, useToast } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 
 export default function RegisterPage() {
     const navigate = useNavigate()
     const { login: saveLogin } = useAuth()
+    const toast = useToast()
 
     const [fullName, setFullName] = useState('')
     const [email, setEmail] = useState('')
@@ -43,14 +44,17 @@ export default function RegisterPage() {
             })
 
             saveLogin(authResponse)
+            toast.success('Account created successfully')
             navigate('/dashboard')
         } catch (err) {
             console.error('Register error:', err)
 
             if (err instanceof Error) {
                 setError(err.message)
+                toast.error(err.message)
             } else {
                 setError('Register failed')
+                toast.error('Register failed')
             }
         } finally {
             setLoading(false)
@@ -61,7 +65,7 @@ export default function RegisterPage() {
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 via-slate-50 to-slate-100 p-4">
             <Card className="w-full max-w-md p-6 sm:p-7">
                 <div className="mb-6 space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Help Desk</p>
+                    <BrandLogo size="md" className="mb-2" />
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">Create account</h1>
                     <p className="text-sm text-slate-600">Register to access the Help Desk system</p>
                 </div>

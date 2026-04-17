@@ -6,13 +6,14 @@ import {
     markAllNotificationsAsRead,
     markNotificationAsRead,
 } from '../api/notificationApi'
-import { Badge, Card, ConfirmDialog, SectionHeader, buttonVariants } from '../components/ui'
+import { Badge, Card, ConfirmDialog, SectionHeader, buttonVariants, useToast } from '../components/ui'
 
 export default function NotificationsPage() {
     const queryClient = useQueryClient()
+    const toast = useToast()
     const [isMarkAllConfirmOpen, setIsMarkAllConfirmOpen] = useState(false)
 
-    const { data, isLoading, error } = useQuery({
+    const { data, isLoading, isFetching, error } = useQuery({
         queryKey: ['notifications'],
         queryFn: getNotifications,
     })
@@ -21,6 +22,14 @@ export default function NotificationsPage() {
         mutationFn: (id: number) => markNotificationAsRead(id),
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ['notifications'] })
+            toast.success('Notification marked as read')
+        },
+        onError: (err) => {
+            if (err instanceof Error) {
+                toast.error(err.message)
+            } else {
+                toast.error('Failed to update notification')
+            }
         },
     })
 
@@ -28,6 +37,14 @@ export default function NotificationsPage() {
         mutationFn: markAllNotificationsAsRead,
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ['notifications'] })
+            toast.success('All notifications marked as read')
+        },
+        onError: (err) => {
+            if (err instanceof Error) {
+                toast.error(err.message)
+            } else {
+                toast.error('Failed to update notifications')
+            }
         },
     })
 
@@ -58,6 +75,16 @@ export default function NotificationsPage() {
                     description="Review updates from ticket activity and manage unread items quickly."
                     actions={
                         <>
+                            {isFetching && !isLoading && (
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-600">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                                    </span>
+                                    Updating...
+                                </span>
+                            )}
+
                             <button
                                 type="button"
                                 onClick={() => setIsMarkAllConfirmOpen(true)}

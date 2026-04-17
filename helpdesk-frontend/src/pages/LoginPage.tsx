@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router'
 import { login } from '../api/authApi'
-import { Card, buttonVariants, formControlVariants } from '../components/ui'
+import { BrandLogo, Card, buttonVariants, formControlVariants, useToast } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 
 export default function LoginPage() {
     const navigate = useNavigate()
     const { login: saveLogin } = useAuth()
+    const toast = useToast()
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -21,6 +22,7 @@ export default function LoginPage() {
         try {
             const authResponse = await login({ email, password })
             saveLogin(authResponse)
+            toast.success('Logged in successfully')
             navigate('/dashboard')
         }
         catch (err) {
@@ -28,9 +30,13 @@ export default function LoginPage() {
 
             if (err instanceof Error) {
                 setError(err.message)
+                toast.error(err.message)
             } else {
                 setError('Login failed')
+                toast.error('Login failed')
             }
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -38,7 +44,7 @@ export default function LoginPage() {
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 via-slate-50 to-slate-100 p-4">
             <Card className="w-full max-w-md p-6 sm:p-7">
                 <div className="mb-6 space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Help Desk</p>
+                    <BrandLogo size="md" className="mb-2" />
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">Welcome back</h1>
                     <p className="text-sm text-slate-600">Sign in to access your dashboard</p>
                 </div>

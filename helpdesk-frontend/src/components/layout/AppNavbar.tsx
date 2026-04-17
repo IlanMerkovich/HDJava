@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { buttonVariants } from '../ui'
+import { BrandLogo, buttonVariants } from '../ui'
 import { useAuth } from '../../context/AuthContext'
 import { getNotifications } from '../../api/notificationApi'
 
@@ -39,9 +39,10 @@ export default function AppNavbar() {
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                         <Link
                             to="/dashboard"
-                            className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
+                            className="block"
+                            aria-label="Helpdesk Support"
                         >
-                            Help Desk
+                            <BrandLogo size="lg" />
                         </Link>
 
                         <nav className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200 bg-white/90 p-1.5 shadow-sm">

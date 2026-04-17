@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { getTickets } from '../api/ticketApi'
-import { Badge, Card, SectionHeader } from '../components/ui'
+import { Badge, Card, SectionHeader, Skeleton } from '../components/ui'
 import { buttonVariants, formControlVariants } from '../components/ui'
 import { getPriorityBadgeTone, getStatusBadgeTone } from '../utils/ticketBadgeTone'
 import type { TicketPriority, TicketQueryParams, TicketStatus } from '../types/ticket'
@@ -18,6 +18,8 @@ const DEFAULT_PARAMS: TicketQueryParams = {
 }
 
 export default function TicketsPage() {
+    const SEARCH_DEBOUNCE_MS = 450
+
     const [searchInput, setSearchInput] = useState('')
     const [statusFilter, setStatusFilter] = useState<TicketStatus | ''>('')
     const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('')
@@ -27,7 +29,29 @@ export default function TicketsPage() {
 
     const [params, setParams] = useState<TicketQueryParams>(DEFAULT_PARAMS)
 
-    const { data, isLoading, error } = useQuery({
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            const normalizedQuery = searchInput.trim()
+
+            setParams((prev) => {
+                if (prev.query === normalizedQuery) {
+                    return prev
+                }
+
+                return {
+                    ...prev,
+                    page: 0,
+                    query: normalizedQuery,
+                }
+            })
+        }, SEARCH_DEBOUNCE_MS)
+
+        return () => {
+            window.clearTimeout(timeoutId)
+        }
+    }, [searchInput])
+
+    const { data, isLoading, isFetching, error } = useQuery({
         queryKey: ['tickets', params],
         queryFn: () => getTickets(params),
     })
@@ -38,7 +62,7 @@ export default function TicketsPage() {
             size,
             sortBy,
             direction,
-            query: searchInput,
+            query: searchInput.trim(),
             status: statusFilter,
             priority: priorityFilter,
         })
@@ -74,9 +98,34 @@ export default function TicketsPage() {
 
     if (isLoading) {
         return (
-            <Card className="px-5 py-4 text-slate-600">
-                Loading tickets...
-            </Card>
+            <div className="space-y-6">
+                <Card className="p-5 sm:p-6">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {Array.from({ length: 6 }).map((_, index) => (
+                            <div key={`filter-skeleton-${index}`} className="space-y-2">
+                                <Skeleton className="h-3 w-20" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-5 flex gap-3">
+                        <Skeleton className="h-10 w-28" />
+                        <Skeleton className="h-10 w-20" />
+                    </div>
+                </Card>
+
+                <Card className="overflow-hidden p-4">
+                    <div className="space-y-3">
+                        {Array.from({ length: 8 }).map((_, index) => (
+                            <div key={`row-skeleton-${index}`} className="grid grid-cols-4 gap-3 md:grid-cols-8">
+                                {Array.from({ length: 8 }).map((__, cellIndex) => (
+                                    <Skeleton key={`cell-${index}-${cellIndex}`} className="h-5 w-full" />
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            </div>
         )
     }
 
@@ -116,7 +165,18 @@ export default function TicketsPage() {
                 <Card className="p-5 sm:p-6">
                     <div className="mb-4 flex items-center justify-between gap-3">
                         <h2 className="text-lg font-semibold text-slate-900">Filters</h2>
-                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Refine results</p>
+                        <div className="text-right">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Refine results</p>
+                            {isFetching && !isLoading && (
+                                <p className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-600">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                                    </span>
+                                    Searching...
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

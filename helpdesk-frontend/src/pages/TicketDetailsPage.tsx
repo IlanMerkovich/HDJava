@@ -18,7 +18,7 @@ import {
     uploadAttachment,
 } from '../api/attachmentApi'
 import { getUsers } from '../api/userApi'
-import { Badge, Card, ConfirmDialog, SectionHeader, buttonVariants, formControlVariants } from '../components/ui'
+import { Badge, Card, ConfirmDialog, SectionHeader, Skeleton, buttonVariants, formControlVariants, useToast } from '../components/ui'
 import { getPriorityBadgeTone, getStatusBadgeTone } from '../utils/ticketBadgeTone'
 import { useAuth } from '../context/AuthContext'
 import type { TicketAttachmentResponse } from '../types/attachment'
@@ -32,6 +32,7 @@ export default function TicketDetailsPage() {
 
     const queryClient = useQueryClient()
     const { user } = useAuth()
+    const toast = useToast()
 
     const [commentText, setCommentText] = useState('')
     const [commentError, setCommentError] = useState('')
@@ -104,12 +105,15 @@ export default function TicketDetailsPage() {
             setCommentText('')
             setCommentError('')
             await queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+            toast.success('Comment added')
         },
         onError: (error) => {
             if (error instanceof Error) {
                 setCommentError(error.message)
+                toast.error(error.message)
             } else {
                 setCommentError('Failed to add comment')
+                toast.error('Failed to add comment')
             }
         },
     })
@@ -123,12 +127,15 @@ export default function TicketDetailsPage() {
             }
             setAttachmentError('')
             await queryClient.invalidateQueries({ queryKey: ['attachments', ticketId] })
+            toast.success('Attachment uploaded')
         },
         onError: (error) => {
             if (error instanceof Error) {
                 setAttachmentError(error.message)
+                toast.error(error.message)
             } else {
                 setAttachmentError('Failed to upload attachment')
+                toast.error('Failed to upload attachment')
             }
         },
     })
@@ -139,12 +146,15 @@ export default function TicketDetailsPage() {
             setAttachmentToDelete(null)
             setAttachmentError('')
             await queryClient.invalidateQueries({ queryKey: ['attachments', ticketId] })
+            toast.success('Attachment deleted')
         },
         onError: (error) => {
             if (error instanceof Error) {
                 setAttachmentError(error.message)
+                toast.error(error.message)
             } else {
                 setAttachmentError('Failed to delete attachment')
+                toast.error('Failed to delete attachment')
             }
         },
     })
@@ -160,12 +170,15 @@ export default function TicketDetailsPage() {
                 queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
                 queryClient.invalidateQueries({ queryKey: ['notifications'] }),
             ])
+            toast.success('Ticket status updated')
         },
         onError: (error) => {
             if (error instanceof Error) {
                 setStatusActionError(error.message)
+                toast.error(error.message)
             } else {
                 setStatusActionError('Failed to update ticket status')
+                toast.error('Failed to update ticket status')
             }
         },
     })
@@ -181,12 +194,15 @@ export default function TicketDetailsPage() {
                 queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
                 queryClient.invalidateQueries({ queryKey: ['notifications'] }),
             ])
+            toast.success('Ticket reopened')
         },
         onError: (error) => {
             if (error instanceof Error) {
                 setStatusActionError(error.message)
+                toast.error(error.message)
             } else {
                 setStatusActionError('Failed to reopen ticket')
+                toast.error('Failed to reopen ticket')
             }
         },
     })
@@ -203,12 +219,15 @@ export default function TicketDetailsPage() {
                 queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
                 queryClient.invalidateQueries({ queryKey: ['notifications'] }),
             ])
+            toast.success('Ticket assigned')
         },
         onError: (error) => {
             if (error instanceof Error) {
                 setAssignmentError(error.message)
+                toast.error(error.message)
             } else {
                 setAssignmentError('Failed to assign ticket')
+                toast.error('Failed to assign ticket')
             }
         },
     })
@@ -224,12 +243,15 @@ export default function TicketDetailsPage() {
                 queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
                 queryClient.invalidateQueries({ queryKey: ['notifications'] }),
             ])
+            toast.success('Ticket unassigned')
         },
         onError: (error) => {
             if (error instanceof Error) {
                 setAssignmentError(error.message)
+                toast.error(error.message)
             } else {
                 setAssignmentError('Failed to unassign ticket')
+                toast.error('Failed to unassign ticket')
             }
         },
     })
@@ -238,11 +260,14 @@ export default function TicketDetailsPage() {
         try {
             setAttachmentError('')
             await downloadAttachment(attachmentId, fileName)
+            toast.success('Download started')
         } catch (error) {
             if (error instanceof Error) {
                 setAttachmentError(error.message)
+                toast.error(error.message)
             } else {
                 setAttachmentError('Failed to download attachment')
+                toast.error('Failed to download attachment')
             }
         }
     }
@@ -254,8 +279,10 @@ export default function TicketDetailsPage() {
         } catch (error) {
             if (error instanceof Error) {
                 setAttachmentError(error.message)
+                toast.error(error.message)
             } else {
                 setAttachmentError('Failed to preview attachment')
+                toast.error('Failed to preview attachment')
             }
         }
     }
@@ -354,9 +381,36 @@ export default function TicketDetailsPage() {
 
     if (isLoading) {
         return (
-            <Card className="px-5 py-4 text-slate-600">
-                Loading ticket details...
-            </Card>
+            <div className="grid gap-6 xl:grid-cols-12">
+                <div className="space-y-6 xl:col-span-8">
+                    <Card className="p-6 space-y-4">
+                        <Skeleton className="h-8 w-2/3" />
+                        <div className="flex gap-2">
+                            <Skeleton className="h-6 w-20" />
+                            <Skeleton className="h-6 w-20" />
+                        </div>
+                        <Skeleton className="h-24 w-full" />
+                    </Card>
+                    <Card className="p-6 space-y-3">
+                        <Skeleton className="h-6 w-28" />
+                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-16 w-full" />
+                    </Card>
+                </div>
+                <div className="space-y-6 xl:col-span-4">
+                    <Card className="p-6 space-y-3">
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                    </Card>
+                    <Card className="p-6 space-y-3">
+                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                    </Card>
+                </div>
+            </div>
         )
     }
 
@@ -418,7 +472,10 @@ export default function TicketDetailsPage() {
                         </div>
 
                         {historyLoading ? (
-                            <div className="text-slate-600">Loading history...</div>
+                            <div className="space-y-3">
+                                <Skeleton className="h-16 w-full" />
+                                <Skeleton className="h-16 w-full" />
+                            </div>
                         ) : historyError instanceof Error ? (
                             <div className="rounded-lg bg-red-100 px-4 py-3 text-red-700">
                                 Failed to load history: {historyError.message}
@@ -717,7 +774,10 @@ export default function TicketDetailsPage() {
                         )}
 
                         {attachmentsLoading ? (
-                            <div className="text-slate-600">Loading attachments...</div>
+                            <div className="space-y-3">
+                                <Skeleton className="h-14 w-full" />
+                                <Skeleton className="h-14 w-full" />
+                            </div>
                         ) : attachmentsError instanceof Error ? (
                             <div className="rounded-lg bg-red-100 px-4 py-3 text-red-700">
                                 Failed to load attachments: {attachmentsError.message}

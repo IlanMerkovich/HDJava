@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { useAuth } from '../context/AuthContext'
 import { getDashboardSummary } from '../api/dashboardApi'
-import { Badge, Card, SectionHeader, buttonVariants } from '../components/ui'
+import { Badge, BrandLogo, Card, SectionHeader, Skeleton, buttonVariants } from '../components/ui'
 import { getPriorityBadgeTone, getStatusBadgeTone } from '../utils/ticketBadgeTone'
 
 const statCardClass = 'p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]'
@@ -39,7 +39,7 @@ function getTimeGreeting() {
 export default function DashboardPage() {
     const { user } = useAuth()
 
-    const { data, isLoading, error } = useQuery({
+    const { data, isLoading, isFetching, error } = useQuery({
         queryKey: ['dashboard-summary'],
         queryFn: getDashboardSummary,
     })
@@ -50,9 +50,21 @@ export default function DashboardPage() {
                 title="Dashboard"
                 description="Track team throughput, recent changes, and your daily workload in one place."
                 actions={
-                    <Link to="/tickets/new" className={buttonVariants({ variant: 'secondary' })}>
-                        Create Ticket
-                    </Link>
+                    <>
+                        {isFetching && !isLoading && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-600">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                                </span>
+                                Updating...
+                            </span>
+                        )}
+
+                        <Link to="/tickets/new" className={buttonVariants({ variant: 'secondary' })}>
+                            Create Ticket
+                        </Link>
+                    </>
                 }
             />
 
@@ -64,9 +76,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="space-y-3">
-                            <div className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-100">
-                                Help Desk overview
-                            </div>
+                            <BrandLogo size="sm" variant="framed" />
 
                             <div>
                                 <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
@@ -120,9 +130,27 @@ export default function DashboardPage() {
             </div>
 
             {isLoading ? (
-                <Card className="p-6 text-lg text-slate-600">
-                    Loading dashboard summary...
-                </Card>
+                <div className="space-y-4">
+                    <Card className="p-6">
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            {Array.from({ length: 4 }).map((_, index) => (
+                                <div key={`user-skeleton-${index}`} className="space-y-2">
+                                    <Skeleton className="h-3 w-20" />
+                                    <Skeleton className="h-6 w-28" />
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                            <Card key={`stats-skeleton-${index}`} className="p-5">
+                                <Skeleton className="h-3 w-24" />
+                                <Skeleton className="mt-3 h-9 w-16" />
+                            </Card>
+                        ))}
+                    </div>
+                </div>
             ) : error instanceof Error ? (
                 <Card className="p-6">
                     <div className="rounded-lg bg-red-100 text-red-700 px-4 py-3">
