@@ -8,10 +8,7 @@ export interface AuthResponse {
     token?: string
 }
 
-export interface CurrentUserResponse {
-    email: string
-    role: UserRole
-}
+export interface CurrentUserResponse extends Omit<AuthResponse, 'token'> {}
 
 export interface LoginRequest {
     email: string

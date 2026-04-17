@@ -7,8 +7,8 @@ export default function ProtectedLayout() {
 
     if (isRestoringAuth) {
         return (
-            <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-                <div className="rounded-2xl bg-white shadow-lg px-6 py-4 text-slate-700">
+            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-6">
+                <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-slate-700 shadow-sm">
                     Checking your session...
                 </div>
             </div>
@@ -20,10 +20,12 @@ export default function ProtectedLayout() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-100">
+        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
             <AppNavbar />
-            <main className="p-6">
-                <Outlet />
+            <main className="px-4 py-6 sm:px-6 lg:py-8">
+                <div className="mx-auto w-full max-w-7xl">
+                    <Outlet />
+                </div>
             </main>
         </div>
     )

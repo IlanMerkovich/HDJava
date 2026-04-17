@@ -2,6 +2,9 @@ package controller;
 
 import com.ilan.helpdesk.dto.LoginRequest;
 import com.ilan.helpdesk.dto.RegisterRequest;
+import com.ilan.helpdesk.repository.TicketAttachmentRepository;
+import com.ilan.helpdesk.repository.TicketHistoryRepository;
+import com.ilan.helpdesk.repository.TicketRepository;
 import com.ilan.helpdesk.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,9 +15,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
-import support.IntegrationTestHelper;
 
 import static org.hamcrest.Matchers.notNullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -31,10 +34,28 @@ public class AuthControllerIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    private IntegrationTestHelper helper;
+    @Autowired
+    private TicketRepository ticketRepository;
+
+    @Autowired
+    private TicketHistoryRepository ticketHistoryRepository;
+
+    @Autowired
+    private TicketAttachmentRepository ticketAttachmentRepository;
+
+    @Autowired
+    private com.ilan.helpdesk.repository.CommentRepository commentRepository;
+
+    @Autowired
+    private com.ilan.helpdesk.repository.NotificationRepository notificationRepository;
 
     @BeforeEach
     void clearDatabase() {
+        notificationRepository.deleteAll();
+        ticketAttachmentRepository.deleteAll();
+        ticketHistoryRepository.deleteAll();
+        commentRepository.deleteAll();
+        ticketRepository.deleteAll();
         userRepository.deleteAll();
     }
 
@@ -147,5 +168,40 @@ public class AuthControllerIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.errors.email").exists());
+    }
+
+    @Test
+    void me_shouldReturnCurrentAuthenticatedUserProfile() throws Exception {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setFullName("Profile User");
+        registerRequest.setEmail("profileuser@example.com");
+        registerRequest.setPassword("123456");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isOk());
+
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("profileuser@example.com");
+        loginRequest.setPassword("123456");
+
+        String loginResponse = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String token = objectMapper.readTree(loginResponse).path("token").textValue();
+
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", notNullValue()))
+                .andExpect(jsonPath("$.fullName").value("Profile User"))
+                .andExpect(jsonPath("$.email").value("profileuser@example.com"))
+                .andExpect(jsonPath("$.role").value("CLIENT"));
     }
 }

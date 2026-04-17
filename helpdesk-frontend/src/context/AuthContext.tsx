@@ -71,21 +71,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     return
                 }
 
-                const nextUser: AuthResponse = initialUser
-                    ? {
-                          ...initialUser,
-                          email: currentUser.email,
-                          role: currentUser.role,
-                          token: token ?? initialUser.token,
-                      }
-                    : {
-                          id: 0,
-                          fullName: currentUser.email,
-                          email: currentUser.email,
-                          role: currentUser.role,
-                          token: token ?? undefined,
-                      }
-
+                const nextUser: AuthResponse = {
+                    ...currentUser,
+                    token: token ?? undefined,
+                }
                 setUser(nextUser)
 
                 if (token) {
@@ -112,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => {
             cancelled = true
         }
-    }, [hasCompletedInitialAuthCheck, token, initialUser])
+    }, [hasCompletedInitialAuthCheck, token])
 
     const value = useMemo(
         () => ({

@@ -18,8 +18,12 @@ import {
     uploadAttachment,
 } from '../api/attachmentApi'
 import { getUsers } from '../api/userApi'
+import { Badge, Card, SectionHeader, buttonVariants } from '../components/ui'
+import { getPriorityBadgeTone, getStatusBadgeTone } from '../utils/ticketBadgeTone'
 import { useAuth } from '../context/AuthContext'
 import type { TicketStatus } from '../types/ticket'
+
+const surfaceCardClass = 'p-6'
 
 export default function TicketDetailsPage() {
     const params = useParams()
@@ -262,7 +266,7 @@ export default function TicketDetailsPage() {
                     type="button"
                     onClick={() => updateStatusMutation.mutate('IN_PROGRESS')}
                     disabled={isBusy}
-                    className="rounded-lg bg-blue-600 text-white px-4 py-2 font-medium disabled:opacity-50"
+                    className={buttonVariants({ variant: 'secondary' })}
                 >
                     {updateStatusMutation.isPending ? 'Updating...' : 'Set In Progress'}
                 </button>
@@ -275,7 +279,7 @@ export default function TicketDetailsPage() {
                     type="button"
                     onClick={() => updateStatusMutation.mutate('RESOLVED')}
                     disabled={isBusy}
-                    className="rounded-lg bg-amber-500 text-white px-4 py-2 font-medium disabled:opacity-50"
+                    className={buttonVariants({ className: 'bg-amber-500 hover:bg-amber-600 text-white' })}
                 >
                     {updateStatusMutation.isPending ? 'Updating...' : 'Set Resolved'}
                 </button>
@@ -288,7 +292,7 @@ export default function TicketDetailsPage() {
                     type="button"
                     onClick={() => updateStatusMutation.mutate('CLOSED')}
                     disabled={isBusy}
-                    className="rounded-lg bg-emerald-600 text-white px-4 py-2 font-medium disabled:opacity-50"
+                    className={buttonVariants({ className: 'bg-emerald-600 hover:bg-emerald-700 text-white' })}
                 >
                     {updateStatusMutation.isPending ? 'Updating...' : 'Set Closed'}
                 </button>
@@ -301,7 +305,7 @@ export default function TicketDetailsPage() {
                     type="button"
                     onClick={() => reopenTicketMutation.mutate()}
                     disabled={isBusy}
-                    className="rounded-lg bg-slate-900 text-white px-4 py-2 font-medium disabled:opacity-50"
+                    className={buttonVariants()}
                 >
                     {reopenTicketMutation.isPending ? 'Reopening...' : 'Reopen Ticket'}
                 </button>
@@ -339,59 +343,64 @@ export default function TicketDetailsPage() {
 
     if (!Number.isFinite(ticketId)) {
         return (
-            <div className="p-6">
-                <div className="rounded-lg bg-red-100 text-red-700 px-4 py-3">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
                     Invalid ticket id
-                </div>
             </div>
         )
     }
 
     if (isLoading) {
-        return <div className="p-6 text-lg">Loading ticket details...</div>
+        return (
+            <Card className="px-5 py-4 text-slate-600">
+                Loading ticket details...
+            </Card>
+        )
     }
 
     if (error instanceof Error) {
         return (
-            <div className="p-6">
-                <div className="rounded-lg bg-red-100 text-red-700 px-4 py-3">
-                    Failed to load ticket: {error.message}
-                </div>
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+                Failed to load ticket: {error.message}
             </div>
         )
     }
 
     if (!data) {
         return (
-            <div className="p-6">
-                <div className="rounded-lg bg-yellow-100 text-yellow-700 px-4 py-3">
-                    Ticket not found.
-                </div>
+            <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-yellow-700">
+                Ticket not found.
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-slate-100 p-6">
-            <div className="max-w-5xl mx-auto space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold">Ticket #{data.id}</h1>
-                        <p className="text-slate-600 mt-1">Ticket details, comments and attachments</p>
-                    </div>
+        <div className="space-y-6">
+            <div className="mx-auto max-w-5xl space-y-6">
+                <SectionHeader
+                    title={`Ticket #${data.id}`}
+                    description="Ticket details, comments and attachments"
+                    actions={
+                        <Link
+                            to="/tickets"
+                            className={buttonVariants({ variant: 'neutral' })}
+                        >
+                            Back to Tickets
+                        </Link>
+                    }
+                />
 
-                    <Link
-                        to="/tickets"
-                        className="rounded-lg bg-slate-900 text-white px-4 py-2 font-medium"
-                    >
-                        Back to Tickets
-                    </Link>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-lg p-6 space-y-6">
+                <Card className={`${surfaceCardClass} space-y-6`}>
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
                             <h2 className="text-2xl font-semibold">{data.title}</h2>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
+                                <Badge tone={getStatusBadgeTone(data.status)}>
+                                    {data.status}
+                                </Badge>
+                                <Badge tone={getPriorityBadgeTone(data.priority)}>
+                                    {data.priority}
+                                </Badge>
+                            </div>
                             <p className="text-slate-600 mt-2 whitespace-pre-line">
                                 {data.description}
                             </p>
@@ -423,7 +432,7 @@ export default function TicketDetailsPage() {
                                         type="button"
                                         onClick={() => unassignTicketMutation.mutate()}
                                         disabled={unassignTicketMutation.isPending || assignTicketMutation.isPending}
-                                        className="rounded-lg bg-red-600 text-white px-4 py-2 font-medium disabled:opacity-50"
+                                        className={buttonVariants({ variant: 'danger' })}
                                     >
                                         {unassignTicketMutation.isPending ? 'Unassigning...' : 'Unassign'}
                                     </button>
@@ -460,7 +469,7 @@ export default function TicketDetailsPage() {
                                         assignTicketMutation.mutate(Number(selectedAgentId))
                                     }}
                                     disabled={assignTicketMutation.isPending || usersLoading || unassignTicketMutation.isPending}
-                                    className="rounded-lg bg-blue-600 text-white px-4 py-2 font-medium disabled:opacity-50"
+                                    className={buttonVariants({ variant: 'secondary' })}
                                 >
                                     {assignTicketMutation.isPending ? 'Assigning...' : 'Assign'}
                                 </button>
@@ -496,12 +505,20 @@ export default function TicketDetailsPage() {
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="rounded-xl border p-4">
                             <h3 className="text-sm text-slate-500 mb-1">Status</h3>
-                            <p className="font-semibold">{data.status}</p>
+                            <p>
+                                <Badge tone={getStatusBadgeTone(data.status)}>
+                                {data.status}
+                                </Badge>
+                            </p>
                         </div>
 
                         <div className="rounded-xl border p-4">
                             <h3 className="text-sm text-slate-500 mb-1">Priority</h3>
-                            <p className="font-semibold">{data.priority}</p>
+                            <p>
+                                <Badge tone={getPriorityBadgeTone(data.priority)}>
+                                {data.priority}
+                                </Badge>
+                            </p>
                         </div>
 
                         <div className="rounded-xl border p-4">
@@ -528,9 +545,9 @@ export default function TicketDetailsPage() {
                             </p>
                         </div>
                     </div>
-                </div>
+                </Card>
 
-                <div className="bg-white rounded-2xl shadow-lg p-6">
+                <Card className={surfaceCardClass}>
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-2xl font-bold">History</h2>
                         <span className="text-sm text-slate-600">
@@ -570,9 +587,9 @@ export default function TicketDetailsPage() {
                     ) : (
                         <div className="text-slate-600">No history events yet.</div>
                     )}
-                </div>
+                </Card>
 
-                <div className="bg-white rounded-2xl shadow-lg p-6">
+                <Card className={surfaceCardClass}>
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-2xl font-bold">Attachments</h2>
                         <span className="text-sm text-slate-600">
@@ -616,7 +633,7 @@ export default function TicketDetailsPage() {
                                 <button
                                     type="submit"
                                     disabled={uploadAttachmentMutation.isPending}
-                                    className="rounded-lg bg-slate-900 text-white px-4 py-2 font-medium disabled:opacity-50"
+                                    className={buttonVariants()}
                                 >
                                     {uploadAttachmentMutation.isPending ? 'Uploading...' : 'Upload Attachment'}
                                 </button>
@@ -661,7 +678,7 @@ export default function TicketDetailsPage() {
                                                 onClick={() =>
                                                     handleDownload(attachment.id, attachment.originalFileName)
                                                 }
-                                                className="rounded-lg bg-slate-900 text-white px-3 py-1.5 text-sm font-medium"
+                                                className={buttonVariants({ size: 'sm' })}
                                             >
                                                 Download
                                             </button>
@@ -670,7 +687,7 @@ export default function TicketDetailsPage() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handlePreview(attachment.id)}
-                                                    className="rounded-lg bg-blue-600 text-white px-3 py-1.5 text-sm font-medium"
+                                                    className={buttonVariants({ variant: 'secondary', size: 'sm' })}
                                                 >
                                                     Preview
                                                 </button>
@@ -681,7 +698,7 @@ export default function TicketDetailsPage() {
                                                     type="button"
                                                     onClick={() => deleteAttachmentMutation.mutate(attachment.id)}
                                                     disabled={deleteAttachmentMutation.isPending}
-                                                    className="rounded-lg bg-red-600 text-white px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                                                    className={buttonVariants({ variant: 'danger', size: 'sm' })}
                                                 >
                                                     {deleteAttachmentMutation.isPending ? 'Deleting...' : 'Delete'}
                                                 </button>
@@ -694,9 +711,9 @@ export default function TicketDetailsPage() {
                     ) : (
                         <div className="text-slate-600">No attachments yet.</div>
                     )}
-                </div>
+                </Card>
 
-                <div className="bg-white rounded-2xl shadow-lg p-6">
+                <Card className={surfaceCardClass}>
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-2xl font-bold">Comments</h2>
                         <span className="text-sm text-slate-600">
@@ -738,7 +755,7 @@ export default function TicketDetailsPage() {
                                 <button
                                     type="submit"
                                     disabled={addCommentMutation.isPending}
-                                    className="rounded-lg bg-slate-900 text-white px-4 py-2 font-medium disabled:opacity-50"
+                                    className={buttonVariants()}
                                 >
                                     {addCommentMutation.isPending ? 'Adding Comment...' : 'Add Comment'}
                                 </button>
@@ -774,7 +791,7 @@ export default function TicketDetailsPage() {
                     ) : (
                         <div className="text-slate-600">No comments yet.</div>
                     )}
-                </div>
+                </Card>
             </div>
         </div>
     )

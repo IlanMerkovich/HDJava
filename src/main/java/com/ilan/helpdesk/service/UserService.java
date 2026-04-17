@@ -75,6 +75,8 @@ public class UserService {
         String email=authentication.getName();
         User user=userRepository.findByEmail(email).orElseThrow(()->new ResourceNotFoundException("user not found"));
         CurrentUserResponse response=new CurrentUserResponse();
+        response.setId(user.getId());
+        response.setFullName(user.getFullName());
         response.setEmail(user.getEmail());
         response.setRole(user.getRole());
 

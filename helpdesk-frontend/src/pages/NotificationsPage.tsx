@@ -5,6 +5,8 @@ import {
     markAllNotificationsAsRead,
     markNotificationAsRead,
 } from '../api/notificationApi'
+import { Badge, Card, SectionHeader } from '../components/ui'
+import { buttonVariants } from '../components/ui'
 
 export default function NotificationsPage() {
     const queryClient = useQueryClient()
@@ -29,15 +31,17 @@ export default function NotificationsPage() {
     })
 
     if (isLoading) {
-        return <div className="p-6 text-lg">Loading notifications...</div>
+        return (
+            <Card className="px-5 py-4 text-slate-600">
+                Loading notifications...
+            </Card>
+        )
     }
 
     if (error instanceof Error) {
         return (
-            <div className="p-6">
-                <div className="rounded-lg bg-red-100 text-red-700 px-4 py-3">
-                    Failed to load notifications: {error.message}
-                </div>
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+                Failed to load notifications: {error.message}
             </div>
         )
     }
@@ -46,81 +50,72 @@ export default function NotificationsPage() {
     const unreadCount = notifications.filter((n) => !n.read).length
 
     return (
-        <div className="min-h-screen bg-slate-100 p-6">
-            <div className="max-w-5xl mx-auto space-y-6">
-                <div className="flex items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold">Notifications</h1>
-                        <p className="text-slate-600 mt-1">
-                            View and manage your notifications
-                        </p>
-                    </div>
+        <div className="space-y-6">
+            <div className="mx-auto max-w-5xl space-y-6">
+                <SectionHeader
+                    title="Notifications"
+                    description="View and manage your notifications"
+                    actions={
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => markAllAsReadMutation.mutate()}
+                                disabled={markAllAsReadMutation.isPending || unreadCount === 0}
+                                className={buttonVariants()}
+                            >
+                                {markAllAsReadMutation.isPending ? 'Marking...' : 'Mark all as read'}
+                            </button>
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={() => markAllAsReadMutation.mutate()}
-                            disabled={markAllAsReadMutation.isPending || unreadCount === 0}
-                            className="rounded-lg bg-slate-900 text-white px-4 py-2 font-medium disabled:opacity-50"
-                        >
-                            {markAllAsReadMutation.isPending ? 'Marking...' : 'Mark all as read'}
-                        </button>
+                            <Link
+                                to="/dashboard"
+                                className={buttonVariants({ variant: 'neutral' })}
+                            >
+                                Back to Dashboard
+                            </Link>
+                        </>
+                    }
+                />
 
-                        <Link
-                            to="/dashboard"
-                            className="rounded-lg border px-4 py-2 font-medium"
-                        >
-                            Back to Dashboard
-                        </Link>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-lg p-5">
+                <Card className="p-5">
                     <div className="flex flex-wrap items-center gap-4">
                         <div className="rounded-xl border p-4 min-w-[180px]">
-                            <h2 className="text-sm text-slate-500 mb-1">Total</h2>
-                            <p className="text-2xl font-bold">{notifications.length}</p>
+                            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Total</h2>
+                            <p className="text-2xl font-bold text-slate-900">{notifications.length}</p>
                         </div>
 
                         <div className="rounded-xl border p-4 min-w-[180px]">
-                            <h2 className="text-sm text-slate-500 mb-1">Unread</h2>
-                            <p className="text-2xl font-bold">{unreadCount}</p>
+                            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Unread</h2>
+                            <p className="text-2xl font-bold text-slate-900">{unreadCount}</p>
                         </div>
 
                         <div className="rounded-xl border p-4 min-w-[180px]">
-                            <h2 className="text-sm text-slate-500 mb-1">Read</h2>
-                            <p className="text-2xl font-bold">{notifications.length - unreadCount}</p>
+                            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Read</h2>
+                            <p className="text-2xl font-bold text-slate-900">{notifications.length - unreadCount}</p>
                         </div>
                     </div>
-                </div>
+                </Card>
 
-                <div className="bg-white rounded-2xl shadow-lg p-6">
+                <Card className="p-6">
                     {notifications.length > 0 ? (
                         <div className="space-y-4">
                             {notifications.map((notification) => (
                                 <div
                                     key={notification.id}
                                     className={`rounded-xl border p-4 ${
-                                        notification.read ? 'bg-white' : 'bg-blue-50'
+                                        notification.read ? 'bg-white' : 'bg-blue-50/60'
                                     }`}
                                 >
                                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                                         <div className="space-y-2">
                                             <div className="flex flex-wrap items-center gap-2">
-                        <span
-                            className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${
-                                notification.read
-                                    ? 'bg-slate-200 text-slate-700'
-                                    : 'bg-blue-600 text-white'
-                            }`}
-                        >
-                          {notification.read ? 'Read' : 'Unread'}
-                        </span>
+                                                <Badge tone={notification.read ? 'neutral' : 'blue'} className={notification.read ? '' : 'text-white bg-blue-600'}>
+                                                    {notification.read ? 'Read' : 'Unread'}
+                                                </Badge>
 
                                                 {(notification.notificationType ?? notification.type) && (
-                                                    <span className="inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                            {notification.notificationType ?? notification.type}
-                          </span>
+                                                    <Badge>
+                                                        {notification.notificationType ?? notification.type}
+                                                    </Badge>
                                                 )}
                                             </div>
 
@@ -137,7 +132,7 @@ export default function NotificationsPage() {
                                             {notification.ticketId && (
                                                 <Link
                                                     to={`/tickets/${notification.ticketId}`}
-                                                    className="rounded-lg bg-blue-600 text-white px-3 py-1.5 text-sm font-medium"
+                                                    className={buttonVariants({ variant: 'secondary', size: 'sm' })}
                                                 >
                                                     Open Ticket
                                                 </Link>
@@ -148,7 +143,7 @@ export default function NotificationsPage() {
                                                     type="button"
                                                     onClick={() => markOneAsReadMutation.mutate(notification.id)}
                                                     disabled={markOneAsReadMutation.isPending}
-                                                    className="rounded-lg bg-slate-900 text-white px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                                                    className={buttonVariants({ size: 'sm' })}
                                                 >
                                                     {markOneAsReadMutation.isPending ? 'Updating...' : 'Mark as Read'}
                                                 </button>
@@ -159,9 +154,11 @@ export default function NotificationsPage() {
                             ))}
                         </div>
                     ) : (
-                        <div className="text-slate-600">No notifications yet.</div>
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-slate-600">
+                            No notifications yet.
+                        </div>
                     )}
-                </div>
+                </Card>
             </div>
         </div>
     )

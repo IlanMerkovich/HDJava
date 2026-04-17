@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createTicket } from '../api/ticketApi'
+import { Card, SectionHeader } from '../components/ui'
+import { buttonVariants } from '../components/ui'
 import type { TicketPriority } from '../types/ticket'
 
 export default function CreateTicketPage() {
@@ -52,31 +54,29 @@ export default function CreateTicketPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-100 p-6">
-            <div className="max-w-3xl mx-auto">
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h1 className="text-3xl font-bold">Create Ticket</h1>
-                        <p className="text-slate-600 mt-1">
-                            Open a new help desk ticket
-                        </p>
-                    </div>
+        <div className="space-y-6">
+            <div className="mx-auto max-w-3xl">
+                <SectionHeader
+                    className="mb-6"
+                    title="Create Ticket"
+                    description="Open a new help desk ticket"
+                    actions={
+                        <Link
+                            to="/tickets"
+                            className={buttonVariants({ variant: 'neutral' })}
+                        >
+                            Back to Tickets
+                        </Link>
+                    }
+                />
 
-                    <Link
-                        to="/tickets"
-                        className="rounded-lg bg-slate-900 text-white px-4 py-2 font-medium"
-                    >
-                        Back to Tickets
-                    </Link>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-lg p-6">
+                <Card className="p-6">
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
                             <label className="block text-sm font-medium mb-1">Title</label>
                             <input
                                 type="text"
-                                className="w-full rounded-lg border px-3 py-2 outline-none focus:ring"
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
                                 placeholder="Enter ticket title"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
@@ -86,7 +86,7 @@ export default function CreateTicketPage() {
                         <div>
                             <label className="block text-sm font-medium mb-1">Description</label>
                             <textarea
-                                className="w-full rounded-lg border px-3 py-2 min-h-[160px] outline-none focus:ring"
+                                className="w-full min-h-[160px] rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
                                 placeholder="Describe the issue"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
@@ -96,7 +96,7 @@ export default function CreateTicketPage() {
                         <div>
                             <label className="block text-sm font-medium mb-1">Priority</label>
                             <select
-                                className="w-full rounded-lg border px-3 py-2 outline-none focus:ring"
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition-colors focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
                                 value={priority}
                                 onChange={(e) => setPriority(e.target.value as TicketPriority)}
                             >
@@ -115,12 +115,12 @@ export default function CreateTicketPage() {
                         <button
                             type="submit"
                             disabled={createTicketMutation.isPending}
-                            className="rounded-lg bg-slate-900 text-white px-5 py-2.5 font-medium disabled:opacity-50"
+                            className={buttonVariants({ size: 'lg' })}
                         >
                             {createTicketMutation.isPending ? 'Creating Ticket...' : 'Create Ticket'}
                         </button>
                     </form>
-                </div>
+                </Card>
             </div>
         </div>
     )
